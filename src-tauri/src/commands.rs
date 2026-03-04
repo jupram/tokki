@@ -27,6 +27,15 @@ fn stop_loop_state(runtime: &SharedRuntime) -> Result<Option<mpsc::Sender<()>>, 
     Ok(guard.stop_tx.take())
 }
 
+fn finalize_loop_state(runtime: &SharedRuntime, loop_generation: u64) {
+    if let Ok(mut guard) = runtime.0.lock() {
+        if guard.loop_generation == loop_generation {
+            guard.running = false;
+            guard.stop_tx = None;
+        }
+    }
+}
+
 fn timer_tick(runtime: &SharedRuntime) -> Result<BehaviorTickPayload, String> {
     let mut guard = runtime
         .0
@@ -52,6 +61,7 @@ pub fn start_behavior_loop(
     seed: Option<u64>,
 ) -> Result<(), String> {
     let (tx, rx) = mpsc::channel::<()>();
+    let loop_generation: u64;
 
     {
         let mut guard = runtime
@@ -70,28 +80,34 @@ pub fn start_behavior_loop(
 
         guard.running = true;
         guard.stop_tx = Some(tx);
+        guard.loop_generation = guard.loop_generation.saturating_add(1);
+        loop_generation = guard.loop_generation;
     }
 
     let runtime_ref = runtime.inner().clone();
-    std::thread::spawn(move || loop {
-        if rx.recv_timeout(Duration::from_millis(1_250)).is_ok() {
-            break;
-        }
-
-        let tick = {
-            let mut guard = match runtime_ref.0.lock() {
-                Ok(guard) => guard,
-                Err(_) => break,
-            };
-            if !guard.running {
+    std::thread::spawn(move || {
+        loop {
+            if rx.recv_timeout(Duration::from_millis(1_250)).is_ok() {
                 break;
             }
-            guard.engine.tick(TransitionReason::Timer, None)
-        };
 
-        if emit_behavior_tick(&app, &tick).is_err() {
-            break;
+            let tick = {
+                let mut guard = match runtime_ref.0.lock() {
+                    Ok(guard) => guard,
+                    Err(_) => break,
+                };
+                if !guard.running {
+                    break;
+                }
+                guard.engine.tick(TransitionReason::Timer, None)
+            };
+
+            if emit_behavior_tick(&app, &tick).is_err() {
+                break;
+            }
         }
+
+        finalize_loop_state(&runtime_ref, loop_generation);
     });
 
     Ok(())
@@ -199,5 +215,43 @@ mod tests {
         let guard = runtime.0.lock().expect("runtime lock");
         assert!(!guard.running);
         assert!(guard.stop_tx.is_none());
+    }
+
+    #[test]
+    fn finalize_loop_state_clears_matching_generation() {
+        let runtime = test_runtime(55);
+        let (tx, _rx) = channel();
+
+        {
+            let mut guard = runtime.0.lock().expect("runtime lock");
+            guard.running = true;
+            guard.stop_tx = Some(tx);
+            guard.loop_generation = 3;
+        }
+
+        finalize_loop_state(&runtime, 3);
+
+        let guard = runtime.0.lock().expect("runtime lock");
+        assert!(!guard.running);
+        assert!(guard.stop_tx.is_none());
+    }
+
+    #[test]
+    fn finalize_loop_state_ignores_stale_generation() {
+        let runtime = test_runtime(66);
+        let (tx, _rx) = channel();
+
+        {
+            let mut guard = runtime.0.lock().expect("runtime lock");
+            guard.running = true;
+            guard.stop_tx = Some(tx);
+            guard.loop_generation = 4;
+        }
+
+        finalize_loop_state(&runtime, 3);
+
+        let guard = runtime.0.lock().expect("runtime lock");
+        assert!(guard.running);
+        assert!(guard.stop_tx.is_some());
     }
 }

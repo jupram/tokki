@@ -10,6 +10,7 @@ pub struct RuntimeState {
     pub running: bool,
     pub stop_tx: Option<Sender<()>>,
     pub seed: u64,
+    pub loop_generation: u64,
 }
 
 impl RuntimeState {
@@ -19,6 +20,7 @@ impl RuntimeState {
             running: false,
             stop_tx: None,
             seed,
+            loop_generation: 0,
         }
     }
 }
