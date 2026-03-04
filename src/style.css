@@ -58,7 +58,7 @@ body {
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #fff8e8, #ffdcbc);
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
   transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 8px 24px rgba(67, 35, 20, 0.2);
@@ -67,6 +67,10 @@ body {
 .tokki-avatar:hover {
   transform: translateY(-2px) scale(1.01);
   box-shadow: 0 11px 28px rgba(67, 35, 20, 0.26);
+}
+
+.tokki-avatar:active {
+  cursor: grabbing;
 }
 
 .tokki-avatar .tokki-asset {

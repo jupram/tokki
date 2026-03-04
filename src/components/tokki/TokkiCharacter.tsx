@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, type MouseEvent } from "react";
 import { mapActionToView } from "../../animation/mapActionToView";
 import {
   getCurrentState,
   handleUserInteraction,
   startBehaviorLoop,
+  startWindowDrag,
   stopBehaviorLoop,
   subscribeBehaviorTick
 } from "../../bridge/tauri";
@@ -58,12 +59,30 @@ export function TokkiCharacter(): JSX.Element {
     applyTick(tick);
   };
 
+  const onAvatarMouseDown = (event: MouseEvent<HTMLButtonElement>): void => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    void startWindowDrag().catch((error: unknown) => {
+      console.error("Window drag failed", error);
+    });
+    void onInteract("drag_start");
+  };
+
+  const onAvatarMouseUp = (event: MouseEvent<HTMLButtonElement>): void => {
+    if (event.button !== 0) {
+      return;
+    }
+    void onInteract("drag_end");
+  };
+
   const actionView = mapActionToView(state.current_action);
   const status = connected ? "Connected" : "Disconnected";
 
   return (
-    <section className="tokki-card" aria-label="Tokki">
-      <div className="tokki-stage">
+    <section className="tokki-card" aria-label="Tokki" data-tauri-drag-region>
+      <div className="tokki-stage" data-tauri-drag-region>
         <button
           type="button"
           className={`tokki-avatar ${actionView.toneClass} ${actionView.stateClass}`}
@@ -73,16 +92,13 @@ export function TokkiCharacter(): JSX.Element {
           onMouseEnter={() => {
             void onInteract("hover");
           }}
-          onMouseDown={() => {
-            void onInteract("drag_start");
-          }}
-          onMouseUp={() => {
-            void onInteract("drag_end");
-          }}
+          onMouseDown={onAvatarMouseDown}
+          onMouseUp={onAvatarMouseUp}
           onContextMenu={(event) => {
             event.preventDefault();
             void onInteract("poke");
           }}
+          data-tauri-drag-region
           data-testid="tokki-avatar"
           aria-label="Tokki avatar"
         >

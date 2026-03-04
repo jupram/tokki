@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   createInitialTokkiState,
   type BehaviorAction,
@@ -202,6 +203,14 @@ export async function handleUserInteraction(
   }
 
   return emitFallback("interaction", event);
+}
+
+export async function startWindowDrag(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await getCurrentWindow().startDragging();
 }
 
 export async function getCurrentState(): Promise<TokkiState> {
