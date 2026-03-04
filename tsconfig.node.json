@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "composite": false,
+    "target": "ES2021",
+    "lib": ["ES2021", "DOM", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["vite.config.ts", "playwright.config.ts"]
+}
