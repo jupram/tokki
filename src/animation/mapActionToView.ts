@@ -5,6 +5,10 @@ export type TokkiAnimationStateId =
   | "idle_blink"
   | "idle_hop"
   | "idle_look"
+  | "idle_sneeze"
+  | "idle_slowblink"
+  | "idle_yawn"
+  | "idle_headturn"
   | "rest_nap"
   | "react_poke"
   | "react_hover"
@@ -67,6 +71,30 @@ const ACTION_MAP: Record<string, Omit<ActionViewModel, "assetId">> = {
     stateClass: "state-react-click",
     toneClass: "tone-playful",
     label: "Responding"
+  },
+  idle_sneeze: {
+    stateId: "idle_sneeze",
+    stateClass: "state-idle-sneeze",
+    toneClass: "tone-surprised",
+    label: "Sneezing"
+  },
+  idle_slowblink: {
+    stateId: "idle_slowblink",
+    stateClass: "state-idle-slowblink",
+    toneClass: "tone-sleepy",
+    label: "Slow Blink"
+  },
+  idle_yawn: {
+    stateId: "idle_yawn",
+    stateClass: "state-idle-yawn",
+    toneClass: "tone-sleepy",
+    label: "Yawning"
+  },
+  idle_headturn: {
+    stateId: "idle_headturn",
+    stateClass: "state-idle-headturn",
+    toneClass: "tone-curious",
+    label: "Looking Around"
   }
 };
 

@@ -101,6 +101,11 @@ impl BehaviorEngine {
     }
 
     fn random_idle_action(&mut self) -> BehaviorAction {
+        // 5% chance of a rare special idle
+        if self.rng.gen_range(0..20) == 0 {
+            return self.rare_idle_action();
+        }
+
         match self.rng.gen_range(0..=2) {
             0 => BehaviorAction {
                 id: "idle_blink".to_string(),
@@ -121,6 +126,39 @@ impl BehaviorEngine {
                 animation: "idle.look".to_string(),
                 mood: Mood::Curious,
                 duration_ms: 1_250,
+                interruptible: true,
+            },
+        }
+    }
+
+    fn rare_idle_action(&mut self) -> BehaviorAction {
+        match self.rng.gen_range(0..=3) {
+            0 => BehaviorAction {
+                id: "idle_sneeze".to_string(),
+                animation: "idle.sneeze".to_string(),
+                mood: Mood::Surprised,
+                duration_ms: 800,
+                interruptible: true,
+            },
+            1 => BehaviorAction {
+                id: "idle_slowblink".to_string(),
+                animation: "idle.slowblink".to_string(),
+                mood: Mood::Sleepy,
+                duration_ms: 1_500,
+                interruptible: true,
+            },
+            2 => BehaviorAction {
+                id: "idle_yawn".to_string(),
+                animation: "idle.yawn".to_string(),
+                mood: Mood::Sleepy,
+                duration_ms: 1_800,
+                interruptible: true,
+            },
+            _ => BehaviorAction {
+                id: "idle_headturn".to_string(),
+                animation: "idle.headturn".to_string(),
+                mood: Mood::Curious,
+                duration_ms: 1_100,
                 interruptible: true,
             },
         }
