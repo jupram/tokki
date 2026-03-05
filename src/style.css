@@ -129,15 +129,13 @@ body {
 }
 
 .tokki-avatar .tokki-snore {
-  fill: #ffffff;
-  stroke: rgba(58, 30, 18, 0.15);
-  stroke-width: 1.2;
+  fill: #f4fbff;
+  stroke: rgba(65, 116, 156, 0.72);
+  stroke-width: 1.8;
   opacity: 0;
-}
-
-.tokki-avatar .tokki-zzz {
-  opacity: 0;
-  font-family: "Segoe UI", sans-serif;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(168, 227, 255, 0.95));
 }
 
 .tokki-avatar.tone-idle {
@@ -198,47 +196,25 @@ body {
   animation: nap-breathe 1.6s ease-in-out infinite;
 }
 
-.tokki-avatar.state-rest-nap .tokki-head {
-  animation: nap-head-tilt 2.4s ease-in-out infinite;
-  transform-origin: center;
-}
-
 .tokki-avatar.state-rest-nap .tokki-eye {
-  transform: scaleY(0.12);
-  opacity: 0.6;
-  transition: transform 0.4s ease, opacity 0.4s ease;
+  transform: scaleY(0.22);
+  opacity: 0.7;
 }
 
 .tokki-avatar.state-rest-nap .tokki-mouth {
   stroke-dasharray: 1 5;
 }
 
-.tokki-avatar.state-rest-nap .tokki-ear--left {
-  animation: ear-droop-left 2.4s ease-in-out infinite;
-}
-
-.tokki-avatar.state-rest-nap .tokki-ear--right {
-  animation: ear-droop-right 2.4s ease-in-out infinite;
-}
-
 .tokki-avatar.state-rest-nap .tokki-snore--a {
-  animation: snore-a 1.6s ease-in-out infinite;
+  animation: snore-rise 1.65s ease-out infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-snore--b {
-  animation: snore-b 1.6s ease-in-out infinite;
+  animation: snore-rise 1.65s ease-out 0.52s infinite;
 }
 
-.tokki-avatar.state-rest-nap .tokki-zzz--a {
-  animation: zzz-float-a 2.4s ease-in-out infinite;
-}
-
-.tokki-avatar.state-rest-nap .tokki-zzz--b {
-  animation: zzz-float-b 2.4s ease-in-out infinite 0.6s;
-}
-
-.tokki-avatar.state-rest-nap .tokki-zzz--c {
-  animation: zzz-float-c 2.4s ease-in-out infinite 1.2s;
+.tokki-avatar.state-rest-nap .tokki-snore--c {
+  animation: snore-rise 1.65s ease-out 1.04s infinite;
 }
 
 .tokki-avatar.state-react-poke .tokki-asset {
@@ -375,129 +351,18 @@ body {
   }
 }
 
-@keyframes nap-head-tilt {
+@keyframes snore-rise {
   0% {
-    transform: rotate(0deg) translateY(0);
+    opacity: 0.16;
+    transform: translate(0, 0) scale(0.72);
   }
-  30% {
-    transform: rotate(5deg) translateY(1px);
-  }
-  60% {
-    transform: rotate(3deg) translateY(2px);
-  }
-  100% {
-    transform: rotate(0deg) translateY(0);
-  }
-}
-
-@keyframes ear-droop-left {
-  0% {
-    transform: rotate(0deg);
-  }
-  40% {
-    transform: rotate(-14deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes ear-droop-right {
-  0% {
-    transform: rotate(0deg);
-  }
-  40% {
-    transform: rotate(14deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes zzz-float-a {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.5);
-  }
-  20% {
-    opacity: 0.7;
-    transform: translate(1px, -4px) scale(0.8);
-  }
-  80% {
-    opacity: 0.5;
-    transform: translate(3px, -10px) scale(1);
+  35% {
+    opacity: 0.95;
+    transform: translate(2px, -6px) scale(0.96);
   }
   100% {
     opacity: 0;
-    transform: translate(5px, -16px) scale(1.1);
-  }
-}
-
-@keyframes zzz-float-b {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.5);
-  }
-  20% {
-    opacity: 0.6;
-    transform: translate(2px, -5px) scale(0.85);
-  }
-  80% {
-    opacity: 0.4;
-    transform: translate(5px, -12px) scale(1.05);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(7px, -18px) scale(1.15);
-  }
-}
-
-@keyframes zzz-float-c {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.6);
-  }
-  20% {
-    opacity: 0.5;
-    transform: translate(2px, -6px) scale(0.9);
-  }
-  80% {
-    opacity: 0.35;
-    transform: translate(6px, -14px) scale(1.1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(8px, -20px) scale(1.2);
-  }
-}
-
-@keyframes snore-a {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.6);
-  }
-  40% {
-    opacity: 0.65;
-    transform: translate(2px, -7px) scale(0.9);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(4px, -13px) scale(1.1);
-  }
-}
-
-@keyframes snore-b {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.5);
-  }
-  65% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.5);
-  }
-  100% {
-    opacity: 0.45;
-    transform: translate(2px, -6px) scale(0.85);
+    transform: translate(7px, -17px) scale(1.3);
   }
 }
 
@@ -561,348 +426,6 @@ body {
   }
   100% {
     transform: scale(1);
-  }
-}
-
-/* ─── Cat avatar overrides ─── */
-
-.tokki-asset--cat .tokki-ear-shell,
-.tokki-asset--cat .tokki-head {
-  fill: var(--tokki-shell);
-  stroke: rgba(58, 30, 18, 0.22);
-  stroke-width: 2;
-}
-
-.tokki-asset--cat .tokki-nose {
-  transition: fill 0.3s ease;
-}
-
-.tokki-asset--cat .tokki-whisker line {
-  transition: opacity 0.3s ease;
-}
-
-.tokki-avatar:hover .tokki-asset--cat .tokki-whisker line {
-  opacity: 0.65;
-}
-
-.tokki-asset--cat .tokki-tail {
-  transform-origin: 110px 110px;
-  animation: cat-tail-sway 2.8s ease-in-out infinite;
-}
-
-/* ─── Fox avatar overrides ─── */
-
-.tokki-asset--fox .tokki-ear-shell,
-.tokki-asset--fox .tokki-head {
-  fill: var(--tokki-shell);
-  stroke: rgba(58, 30, 18, 0.22);
-  stroke-width: 2;
-}
-
-.tokki-asset--fox .tokki-face-mask {
-  transition: opacity 0.3s ease;
-}
-
-.tokki-asset--fox .tokki-tail {
-  transform-origin: 108px 112px;
-  animation: fox-tail-wag 2.2s ease-in-out infinite;
-}
-
-.tokki-asset--fox .tokki-tail-tip {
-  animation: tail-tip-glow 2.2s ease-in-out infinite;
-}
-
-@keyframes cat-tail-sway {
-  0% {
-    transform: rotate(0deg);
-  }
-  30% {
-    transform: rotate(8deg);
-  }
-  70% {
-    transform: rotate(-6deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes fox-tail-wag {
-  0% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(10deg);
-  }
-  50% {
-    transform: rotate(0deg);
-  }
-  75% {
-    transform: rotate(-8deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes tail-tip-glow {
-  0% {
-    opacity: 0.85;
-  }
-  50% {
-    opacity: 1;
-    filter: brightness(1.08);
-  }
-  100% {
-    opacity: 0.85;
-  }
-}
-
-/* ─── Chat Bubble ─── */
-
-.tokki-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.chat-bubble {
-  position: relative;
-  max-width: 260px;
-  min-height: 32px;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  background: rgba(255, 252, 245, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(180, 150, 120, 0.22);
-  border-radius: 16px 16px 16px 4px;
-  box-shadow:
-    0 2px 12px rgba(80, 50, 20, 0.08),
-    0 0 0 1px rgba(255, 240, 220, 0.3) inset;
-  opacity: 0;
-  transform: translateY(6px) scale(0.96);
-  animation: none;
-}
-
-.chat-bubble--enter {
-  animation: bubble-enter 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.chat-bubble--exit {
-  animation: bubble-exit 0.4s ease-out forwards;
-}
-
-.chat-bubble__tail {
-  position: absolute;
-  bottom: -6px;
-  left: 16px;
-  width: 12px;
-  height: 12px;
-  background: rgba(255, 252, 245, 0.92);
-  border-bottom: 1.5px solid rgba(180, 150, 120, 0.22);
-  border-left: 1.5px solid rgba(180, 150, 120, 0.22);
-  transform: rotate(-45deg);
-  border-radius: 0 0 0 4px;
-}
-
-.chat-bubble__text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #3a2a1a;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
-  letter-spacing: 0.01em;
-  word-break: break-word;
-}
-
-.chat-bubble__mood {
-  margin-right: 4px;
-  font-size: 12px;
-}
-
-.chat-bubble__typing {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 0;
-}
-
-.chat-bubble__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #c4a882;
-  opacity: 0.4;
-  animation: typing-bounce 1.4s ease-in-out infinite;
-}
-
-.chat-bubble__dot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.chat-bubble__dot:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes bubble-enter {
-  0% {
-    opacity: 0;
-    transform: translateY(6px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes bubble-exit {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.97);
-  }
-}
-
-@keyframes typing-bounce {
-  0%,
-  60%,
-  100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 0.8;
-    transform: translateY(-4px);
-  }
-}
-
-/* ─── Chat Input ─── */
-
-.tokki-chat-panel {
-  width: 100%;
-  max-width: 280px;
-  margin-top: 6px;
-  animation: panel-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.avatar-picker {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.avatar-picker__btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(180, 150, 120, 0.2);
-  background: rgba(255, 252, 245, 0.85);
-  backdrop-filter: blur(4px);
-  cursor: pointer;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.avatar-picker__btn:hover {
-  transform: scale(1.15);
-  border-color: rgba(180, 140, 100, 0.45);
-}
-
-.avatar-picker__btn--active {
-  border-color: rgba(180, 120, 60, 0.6);
-  box-shadow: 0 0 0 2px rgba(210, 170, 120, 0.25);
-  background: rgba(255, 245, 230, 0.95);
-}
-
-.avatar-picker__emoji {
-  font-size: 15px;
-  line-height: 1;
-}
-
-.chat-input {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  background: rgba(255, 252, 245, 0.88);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border: 1.5px solid rgba(180, 150, 120, 0.2);
-  border-radius: 20px;
-  padding: 4px 4px 4px 14px;
-  box-shadow: 0 1px 8px rgba(80, 50, 20, 0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.chat-input:focus-within {
-  border-color: rgba(180, 140, 100, 0.45);
-  box-shadow:
-    0 1px 8px rgba(80, 50, 20, 0.06),
-    0 0 0 3px rgba(210, 180, 140, 0.15);
-}
-
-.chat-input__field {
-  flex: 1;
-  border: 0;
-  outline: none;
-  background: transparent;
-  font-size: 12.5px;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
-  color: #3a2a1a;
-  line-height: 1.4;
-  padding: 4px 0;
-  min-width: 0;
-}
-
-.chat-input__field::placeholder {
-  color: #b0977a;
-  font-style: italic;
-}
-
-.chat-input__send {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 50%;
-  background: #e8d5be;
-  color: #6b4d30;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.chat-input__send:hover:not(:disabled) {
-  background: #dcc5a8;
-  transform: scale(1.06);
-}
-
-.chat-input__send:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.chat-input__send:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-@keyframes panel-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
