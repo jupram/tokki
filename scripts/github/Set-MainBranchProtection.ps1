@@ -46,7 +46,7 @@ $result = $json | gh api `
 $protection = $result | ConvertFrom-Json
 $reviews = $protection.required_pull_request_reviews
 
-Write-Output "Updated branch protection for $Repo:$Branch"
+Write-Output "Updated branch protection for ${Repo}:$Branch"
 Write-Output "Required approvals: $($reviews.required_approving_review_count)"
 Write-Output "Code owner reviews required: $($reviews.require_code_owner_reviews)"
 Write-Output "Last push approval required: $($reviews.require_last_push_approval)"
