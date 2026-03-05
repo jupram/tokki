@@ -19,11 +19,6 @@ $payload = @{
         require_code_owner_reviews      = $true
         require_last_push_approval      = $true
         required_approving_review_count = 1
-        bypass_pull_request_allowances  = @{
-            users = @()
-            teams = @()
-            apps  = @()
-        }
     }
     restrictions                     = $null
     required_linear_history          = $false
@@ -37,11 +32,23 @@ $payload = @{
 
 $json = $payload | ConvertTo-Json -Depth 10
 
-$result = $json | gh api `
-    --method PUT `
-    -H "Accept: application/vnd.github+json" `
-    "repos/$Repo/branches/$Branch/protection" `
-    --input -
+$tmp = [System.IO.Path]::GetTempFileName()
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+try {
+    [System.IO.File]::WriteAllText($tmp, $json, $utf8NoBom)
+
+    $result = gh api `
+        --method PUT `
+        -H "Accept: application/vnd.github+json" `
+        "repos/$Repo/branches/$Branch/protection" `
+        --input $tmp
+}
+finally {
+    if (Test-Path $tmp) {
+        Remove-Item $tmp -Force
+    }
+}
 
 $protection = $result | ConvertFrom-Json
 $reviews = $protection.required_pull_request_reviews
