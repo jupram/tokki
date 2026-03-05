@@ -1,6 +1,6 @@
-import type { BehaviorAction } from "../types/tokki";
+import type { AvatarId, BehaviorAction } from "../types/tokki";
 
-export type TokkiAssetId = "rabbit_v1";
+export type TokkiAssetId = AvatarId;
 export type TokkiAnimationStateId =
   | "idle_blink"
   | "idle_hop"
@@ -19,58 +19,50 @@ export interface ActionViewModel {
   label: string;
 }
 
-const ACTION_MAP: Record<string, ActionViewModel> = {
+const ACTION_MAP: Record<string, Omit<ActionViewModel, "assetId">> = {
   idle_blink: {
-    assetId: "rabbit_v1",
     stateId: "idle_blink",
     stateClass: "state-idle-blink",
     toneClass: "tone-idle",
     label: "Blinking"
   },
   idle_hop: {
-    assetId: "rabbit_v1",
     stateId: "idle_hop",
     stateClass: "state-idle-hop",
     toneClass: "tone-playful",
     label: "Hopping"
   },
   idle_look: {
-    assetId: "rabbit_v1",
     stateId: "idle_look",
     stateClass: "state-idle-look",
     toneClass: "tone-curious",
     label: "Looking Around"
   },
   rest_nap: {
-    assetId: "rabbit_v1",
     stateId: "rest_nap",
     stateClass: "state-rest-nap",
     toneClass: "tone-sleepy",
     label: "Napping"
   },
   react_poke: {
-    assetId: "rabbit_v1",
     stateId: "react_poke",
     stateClass: "state-react-poke",
     toneClass: "tone-surprised",
     label: "Surprised"
   },
   react_hover: {
-    assetId: "rabbit_v1",
     stateId: "react_hover",
     stateClass: "state-react-hover",
     toneClass: "tone-curious",
     label: "Watching You"
   },
   react_drag: {
-    assetId: "rabbit_v1",
     stateId: "react_drag",
     stateClass: "state-react-drag",
     toneClass: "tone-surprised",
     label: "Being Dragged"
   },
   react_click: {
-    assetId: "rabbit_v1",
     stateId: "react_click",
     stateClass: "state-react-click",
     toneClass: "tone-playful",
@@ -78,14 +70,14 @@ const ACTION_MAP: Record<string, ActionViewModel> = {
   }
 };
 
-const FALLBACK_VIEW: ActionViewModel = {
-  assetId: "rabbit_v1",
+const FALLBACK: Omit<ActionViewModel, "assetId"> = {
   stateId: "idle_blink",
   stateClass: "state-idle-blink",
   toneClass: "tone-idle",
   label: "Idle"
 };
 
-export function mapActionToView(action: BehaviorAction): ActionViewModel {
-  return ACTION_MAP[action.id] ?? FALLBACK_VIEW;
+export function mapActionToView(action: BehaviorAction, avatarId: TokkiAssetId = "rabbit_v1"): ActionViewModel {
+  const base = ACTION_MAP[action.id] ?? FALLBACK;
+  return { ...base, assetId: avatarId };
 }

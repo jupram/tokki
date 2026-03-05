@@ -6,9 +6,10 @@ use std::{
 use tauri::{AppHandle, State};
 
 use crate::{
-    engine::models::{BehaviorTickPayload, TokkiState, TransitionReason, UserEvent},
+    engine::models::{BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent},
     events::emit_behavior_tick,
-    runtime::SharedRuntime,
+    llm::models::{ChatMessage, LlmResponse},
+    runtime::{SharedLlmClient, SharedRuntime},
 };
 
 fn now_millis() -> u64 {
@@ -52,6 +53,35 @@ fn apply_user_event(runtime: &SharedRuntime, event: UserEvent) -> Result<Behavio
     Ok(guard
         .engine
         .tick(TransitionReason::Interaction, Some(event)))
+}
+
+fn llm_response_to_action(response: &LlmResponse) -> BehaviorAction {
+    let (id, animation) = match response.animation.as_str() {
+        "idle.hop" => ("idle_hop", "idle.hop"),
+        "idle.look" => ("idle_look", "idle.look"),
+        "rest.nap" => ("rest_nap", "rest.nap"),
+        "react.poke" => ("react_poke", "react.poke"),
+        "react.click" => ("react_click", "react.click"),
+        _ => ("idle_blink", "idle.blink"),
+    };
+
+    BehaviorAction {
+        id: id.to_string(),
+        animation: animation.to_string(),
+        mood: response.mood.clone(),
+        duration_ms: 2000,
+        interruptible: true,
+    }
+}
+
+/// Adjusts energy based on the LLM response intent.
+fn apply_intent_energy(energy: u8, intent: &str) -> u8 {
+    match intent {
+        "greet" | "joke" => (energy as u16 + 15).min(100) as u8,
+        "help" | "think" => (energy as u16 + 5).min(100) as u8,
+        "goodbye" => energy.saturating_sub(10),
+        _ => energy,
+    }
 }
 
 #[tauri::command]
@@ -155,6 +185,135 @@ pub fn advance_tick(
     Ok(tick)
 }
 
+#[derive(serde::Serialize)]
+pub struct ChatResponse {
+    pub reply: LlmResponse,
+    pub tick: BehaviorTickPayload,
+}
+
+#[tauri::command]
+pub async fn send_chat_message(
+    app: AppHandle,
+    runtime: State<'_, SharedRuntime>,
+    llm_client: State<'_, SharedLlmClient>,
+    message: String,
+) -> Result<ChatResponse, String> {
+    let timestamp = now_millis();
+
+    // Add user message to history
+    {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        guard.chat_history.push(ChatMessage {
+            role: "user".to_string(),
+            content: message.clone(),
+            timestamp,
+        });
+    }
+
+    // Get history snapshot and session context for LLM
+    let (history, session_context) = {
+        let guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        (
+            guard.chat_history.clone(),
+            guard.session_memory.to_context_string(),
+        )
+    };
+
+    // Call LLM
+    let client = llm_client.0.lock().await;
+    let reply = client.chat(&message, &history, &session_context).await.unwrap_or_else(|_error| {
+        LlmResponse {
+            line: "Hmm, I can't think right now... try again?".to_string(),
+            mood: Mood::Sleepy,
+            animation: "idle.blink".to_string(),
+            intent: "none".to_string(),
+        }
+    });
+
+    // Store assistant reply in history and update session memory
+    {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        guard.chat_history.push(ChatMessage {
+            role: "assistant".to_string(),
+            content: reply.line.clone(),
+            timestamp: now_millis(),
+        });
+
+        // Update session memory with this exchange
+        let mood_str = serde_json::to_string(&reply.mood).unwrap_or_default();
+        let mood_str = mood_str.trim_matches('"');
+        guard.session_memory.update(&message, &reply.intent, mood_str);
+    }
+
+    // Apply the LLM-driven action to the behavior engine
+    let action = llm_response_to_action(&reply);
+    let tick = {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+
+        // Apply intent-driven energy adjustment
+        let current_energy = guard.engine.current_state().energy;
+        guard.engine.set_energy(apply_intent_energy(current_energy, &reply.intent));
+
+        guard.engine.apply_action(action);
+        let state = guard.engine.current_state();
+        BehaviorTickPayload {
+            state,
+            reason: TransitionReason::Manual,
+        }
+    };
+
+    emit_behavior_tick(&app, &tick)?;
+
+    Ok(ChatResponse { reply, tick })
+}
+
+#[tauri::command]
+pub fn get_chat_history(
+    runtime: State<'_, SharedRuntime>,
+) -> Result<Vec<ChatMessage>, String> {
+    let guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    Ok(guard.chat_history.clone())
+}
+
+#[tauri::command]
+pub fn set_avatar(
+    runtime: State<'_, SharedRuntime>,
+    avatar_id: String,
+) -> Result<(), String> {
+    let mut guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    guard.avatar_id = avatar_id;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_session_memory(
+    runtime: State<'_, SharedRuntime>,
+) -> Result<crate::llm::memory::SessionMemory, String> {
+    let guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    Ok(guard.session_memory.clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,5 +412,46 @@ mod tests {
         let guard = runtime.0.lock().expect("runtime lock");
         assert!(guard.running);
         assert!(guard.stop_tx.is_some());
+    }
+
+    #[test]
+    fn llm_response_maps_to_action() {
+        let response = LlmResponse {
+            line: "Hello!".to_string(),
+            mood: Mood::Playful,
+            animation: "idle.hop".to_string(),
+            intent: "greet".to_string(),
+        };
+        let action = llm_response_to_action(&response);
+        assert_eq!(action.id, "idle_hop");
+        assert_eq!(action.mood, Mood::Playful);
+    }
+
+    #[test]
+    fn intent_energy_greet_boosts() {
+        assert_eq!(apply_intent_energy(50, "greet"), 65);
+        assert_eq!(apply_intent_energy(50, "joke"), 65);
+    }
+
+    #[test]
+    fn intent_energy_goodbye_drains() {
+        assert_eq!(apply_intent_energy(50, "goodbye"), 40);
+        assert_eq!(apply_intent_energy(5, "goodbye"), 0);
+    }
+
+    #[test]
+    fn intent_energy_help_small_boost() {
+        assert_eq!(apply_intent_energy(50, "help"), 55);
+        assert_eq!(apply_intent_energy(50, "think"), 55);
+    }
+
+    #[test]
+    fn intent_energy_none_unchanged() {
+        assert_eq!(apply_intent_energy(50, "none"), 50);
+    }
+
+    #[test]
+    fn intent_energy_caps_at_100() {
+        assert_eq!(apply_intent_energy(95, "greet"), 100);
     }
 }

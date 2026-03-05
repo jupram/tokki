@@ -3,8 +3,13 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   createInitialTokkiState,
+  type AvatarId,
   type BehaviorAction,
   type BehaviorTickPayload,
+  type ChatMessage,
+  type ChatResponse,
+  type LlmResponse,
+  type SessionMemory,
   type TokkiState,
   type TransitionReason,
   type UserEvent
@@ -18,6 +23,7 @@ const fallbackListeners = new Set<TickHandler>();
 let fallbackLoop: ReturnType<typeof setInterval> | null = null;
 let fallbackState: TokkiState = createInitialTokkiState();
 let fallbackSeed = 1337;
+let fallbackChatHistory: ChatMessage[] = [];
 
 function isTauriRuntime(): boolean {
   if (typeof window === "undefined") {
@@ -141,6 +147,28 @@ function emitFallback(reason: TransitionReason, event?: UserEvent): BehaviorTick
   return tick;
 }
 
+const CANNED_REPLIES: Array<{ line: string; mood: LlmResponse["mood"]; intent: string }> = [
+  { line: "Hi there! I'm Tokki, your desktop buddy!", mood: "playful", intent: "greet" },
+  { line: "Hmm, that's interesting... let me think about that!", mood: "curious", intent: "think" },
+  { line: "Hehe, you're fun to talk to!", mood: "playful", intent: "joke" },
+  { line: "I'm just a little rabbit living on your screen~", mood: "idle", intent: "none" },
+  { line: "*wiggles ears* Did you need something?", mood: "curious", intent: "help" },
+  { line: "Zzz... oh! Sorry, dozed off for a sec.", mood: "sleepy", intent: "none" },
+  { line: "Whoa, that's quite a question!", mood: "surprised", intent: "think" },
+];
+
+function fallbackChatReply(message: string): LlmResponse {
+  const lower = message.toLowerCase();
+  if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+    return { ...CANNED_REPLIES[0], animation: "idle.hop" };
+  }
+  if (lower.includes("?")) {
+    return { ...CANNED_REPLIES[1], animation: "idle.look" };
+  }
+  const pick = Math.floor(seededRandom() * CANNED_REPLIES.length);
+  return { ...CANNED_REPLIES[pick], animation: "idle.blink" };
+}
+
 export function parseBehaviorTickPayload(value: unknown): BehaviorTickPayload | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -236,5 +264,58 @@ export async function subscribeBehaviorTick(handler: TickHandler): Promise<() =>
   fallbackListeners.add(handler);
   return () => {
     fallbackListeners.delete(handler);
+  };
+}
+
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
+  if (isTauriRuntime()) {
+    return invoke<ChatResponse>("send_chat_message", { message });
+  }
+
+  const now = Date.now();
+  fallbackChatHistory.push({
+    role: "user",
+    content: message,
+    timestamp: now,
+  });
+
+  // Simulate typing delay
+  await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
+
+  const reply = fallbackChatReply(message);
+  fallbackChatHistory.push({
+    role: "assistant",
+    content: reply.line,
+    timestamp: Date.now(),
+  });
+
+  const tick = emitFallback("manual");
+
+  return { reply, tick };
+}
+
+export async function getChatHistory(): Promise<ChatMessage[]> {
+  if (isTauriRuntime()) {
+    return invoke<ChatMessage[]>("get_chat_history");
+  }
+  return fallbackChatHistory;
+}
+
+export async function setAvatar(avatarId: AvatarId): Promise<void> {
+  if (isTauriRuntime()) {
+    await invoke("set_avatar", { avatarId });
+  }
+}
+
+export async function getSessionMemory(): Promise<SessionMemory> {
+  if (isTauriRuntime()) {
+    return invoke<SessionMemory>("get_session_memory");
+  }
+  return {
+    user_name: null,
+    topics: [],
+    message_count: 0,
+    greet_count: 0,
+    mood_trend: "",
   };
 }
