@@ -27,6 +27,14 @@ impl BehaviorEngine {
         self.state.clone()
     }
 
+    pub fn apply_action(&mut self, action: BehaviorAction) {
+        self.state.current_action = action;
+    }
+
+    pub fn set_energy(&mut self, energy: u8) {
+        self.state.energy = energy.min(100);
+    }
+
     pub fn tick(
         &mut self,
         reason: TransitionReason,

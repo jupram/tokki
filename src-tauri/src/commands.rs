@@ -3,15 +3,13 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use reqwest::{blocking::Client, Url};
-use serde::Deserialize;
-use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::{
-    engine::models::{BehaviorTickPayload, TokkiState, TransitionReason, UserEvent},
+    engine::models::{BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent},
     events::emit_behavior_tick,
-    runtime::SharedRuntime,
+    llm::models::{ChatMessage, LlmResponse},
+    runtime::{SharedLlmClient, SharedRuntime},
 };
 
 fn now_millis() -> u64 {
@@ -19,143 +17,6 @@ fn now_millis() -> u64 {
         Ok(duration) => duration.as_millis() as u64,
         Err(_) => 0,
     }
-}
-
-const LLM_NOT_CONFIGURED: &str = "llm not configured";
-const INVALID_LLM_ENDPOINT: &str =
-    "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
-
-#[derive(Debug, Deserialize)]
-pub struct LlmInteractionRequest {
-    pub prompt: String,
-    pub endpoint: Option<String>,
-    pub model: Option<String>,
-}
-
-fn sanitize_non_empty(value: Option<&str>) -> Option<String> {
-    value
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(String::from)
-}
-
-fn env_non_empty(key: &str) -> Option<String> {
-    sanitize_non_empty(std::env::var(key).ok().as_deref())
-}
-
-fn resolve_llm_endpoint(override_endpoint: Option<&str>) -> Option<String> {
-    sanitize_non_empty(override_endpoint).or_else(|| env_non_empty("TOKKI_LLM_ENDPOINT"))
-}
-
-fn resolve_llm_model(override_model: Option<&str>) -> String {
-    sanitize_non_empty(override_model)
-        .or_else(|| env_non_empty("TOKKI_LLM_MODEL"))
-        .unwrap_or_else(|| String::from("gpt-4o-mini"))
-}
-
-fn is_standard_llm_endpoint(endpoint: &str) -> bool {
-    let url = match Url::parse(endpoint) {
-        Ok(url) => url,
-        Err(_) => return false,
-    };
-
-    let path = url.path().trim_end_matches('/').to_ascii_lowercase();
-    if path.ends_with("/v1/responses") || path.ends_with("/v1/chat/completions") {
-        return true;
-    }
-
-    path.contains("/openai/deployments/")
-        && (path.ends_with("/chat/completions") || path.ends_with("/responses"))
-}
-
-fn extract_llm_text(payload: &Value) -> Option<String> {
-    if let Some(output_text) = payload.get("output_text").and_then(Value::as_str) {
-        let text = output_text.trim();
-        if !text.is_empty() {
-            return Some(String::from(text));
-        }
-    }
-
-    if let Some(text) = payload.get("text").and_then(Value::as_str) {
-        let text = text.trim();
-        if !text.is_empty() {
-            return Some(String::from(text));
-        }
-    }
-
-    if let Some(reply) = payload.get("reply").and_then(Value::as_str) {
-        let reply = reply.trim();
-        if !reply.is_empty() {
-            return Some(String::from(reply));
-        }
-    }
-
-    payload
-        .get("choices")
-        .and_then(Value::as_array)
-        .and_then(|choices| choices.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|message| message.get("content"))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|content| !content.is_empty())
-        .map(String::from)
-}
-
-fn call_llm_endpoint(
-    endpoint: &str,
-    prompt: &str,
-    model: &str,
-    api_key: Option<&str>,
-) -> Result<String, String> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(30))
-        .build()
-        .map_err(|error| format!("failed to create llm client: {error}"))?;
-
-    let is_responses_api = endpoint.trim_end_matches('/').ends_with("/responses");
-    let request_body = if is_responses_api {
-        serde_json::json!({
-            "model": model,
-            "input": prompt
-        })
-    } else {
-        serde_json::json!({
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        })
-    };
-
-    let mut request = client.post(endpoint).json(&request_body);
-    if let Some(secret) = api_key {
-        request = request.bearer_auth(secret);
-    }
-
-    let response = request
-        .send()
-        .map_err(|error| format!("llm request failed: {error}"))?;
-    let status = response.status();
-    let payload = response
-        .json::<Value>()
-        .map_err(|error| format!("failed to parse llm response: {error}"))?;
-
-    if !status.is_success() {
-        if let Some(error_message) = payload
-            .get("error")
-            .and_then(|error| error.get("message"))
-            .and_then(Value::as_str)
-        {
-            return Err(format!("llm request failed ({status}): {error_message}"));
-        }
-        return Err(format!("llm request failed with status {status}"));
-    }
-
-    extract_llm_text(&payload).ok_or_else(|| String::from("llm response missing text content"))
 }
 
 fn stop_loop_state(runtime: &SharedRuntime) -> Result<Option<mpsc::Sender<()>>, String> {
@@ -192,6 +53,35 @@ fn apply_user_event(runtime: &SharedRuntime, event: UserEvent) -> Result<Behavio
     Ok(guard
         .engine
         .tick(TransitionReason::Interaction, Some(event)))
+}
+
+fn llm_response_to_action(response: &LlmResponse) -> BehaviorAction {
+    let (id, animation) = match response.animation.as_str() {
+        "idle.hop" => ("idle_hop", "idle.hop"),
+        "idle.look" => ("idle_look", "idle.look"),
+        "rest.nap" => ("rest_nap", "rest.nap"),
+        "react.poke" => ("react_poke", "react.poke"),
+        "react.click" => ("react_click", "react.click"),
+        _ => ("idle_blink", "idle.blink"),
+    };
+
+    BehaviorAction {
+        id: id.to_string(),
+        animation: animation.to_string(),
+        mood: response.mood.clone(),
+        duration_ms: 2000,
+        interruptible: true,
+    }
+}
+
+/// Adjusts energy based on the LLM response intent.
+fn apply_intent_energy(energy: u8, intent: &str) -> u8 {
+    match intent {
+        "greet" | "joke" => (energy as u16 + 15).min(100) as u8,
+        "help" | "think" => (energy as u16 + 5).min(100) as u8,
+        "goodbye" => energy.saturating_sub(10),
+        _ => energy,
+    }
 }
 
 #[tauri::command]
@@ -295,19 +185,133 @@ pub fn advance_tick(
     Ok(tick)
 }
 
+#[derive(serde::Serialize)]
+pub struct ChatResponse {
+    pub reply: LlmResponse,
+    pub tick: BehaviorTickPayload,
+}
+
 #[tauri::command]
-pub fn request_llm_reply(request: LlmInteractionRequest) -> Result<String, String> {
-    let endpoint = match resolve_llm_endpoint(request.endpoint.as_deref()) {
-        Some(endpoint) => endpoint,
-        None => return Ok(String::from(LLM_NOT_CONFIGURED)),
-    };
-    if !is_standard_llm_endpoint(&endpoint) {
-        return Err(String::from(INVALID_LLM_ENDPOINT));
+pub async fn send_chat_message(
+    app: AppHandle,
+    runtime: State<'_, SharedRuntime>,
+    llm_client: State<'_, SharedLlmClient>,
+    message: String,
+) -> Result<ChatResponse, String> {
+    let timestamp = now_millis();
+
+    // Add user message to history
+    {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        guard.chat_history.push(ChatMessage {
+            role: "user".to_string(),
+            content: message.clone(),
+            timestamp,
+        });
     }
 
-    let model = resolve_llm_model(request.model.as_deref());
-    let api_key = env_non_empty("TOKKI_LLM_API_KEY");
-    call_llm_endpoint(&endpoint, &request.prompt, &model, api_key.as_deref())
+    // Get history snapshot and session context for LLM
+    let (history, session_context) = {
+        let guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        (
+            guard.chat_history.clone(),
+            guard.session_memory.to_context_string(),
+        )
+    };
+
+    // Call LLM
+    let client = llm_client.0.lock().await;
+    let reply = client.chat(&message, &history, &session_context).await.unwrap_or_else(|_error| {
+        LlmResponse {
+            line: "Hmm, I can't think right now... try again?".to_string(),
+            mood: Mood::Sleepy,
+            animation: "idle.blink".to_string(),
+            intent: "none".to_string(),
+        }
+    });
+
+    // Store assistant reply in history and update session memory
+    {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+        guard.chat_history.push(ChatMessage {
+            role: "assistant".to_string(),
+            content: reply.line.clone(),
+            timestamp: now_millis(),
+        });
+
+        // Update session memory with this exchange
+        let mood_str = serde_json::to_string(&reply.mood).unwrap_or_default();
+        let mood_str = mood_str.trim_matches('"');
+        guard.session_memory.update(&message, &reply.intent, mood_str);
+    }
+
+    // Apply the LLM-driven action to the behavior engine
+    let action = llm_response_to_action(&reply);
+    let tick = {
+        let mut guard = runtime
+            .0
+            .lock()
+            .map_err(|error| format!("failed to lock runtime: {error}"))?;
+
+        // Apply intent-driven energy adjustment
+        let current_energy = guard.engine.current_state().energy;
+        guard.engine.set_energy(apply_intent_energy(current_energy, &reply.intent));
+
+        guard.engine.apply_action(action);
+        let state = guard.engine.current_state();
+        BehaviorTickPayload {
+            state,
+            reason: TransitionReason::Manual,
+        }
+    };
+
+    emit_behavior_tick(&app, &tick)?;
+
+    Ok(ChatResponse { reply, tick })
+}
+
+#[tauri::command]
+pub fn get_chat_history(
+    runtime: State<'_, SharedRuntime>,
+) -> Result<Vec<ChatMessage>, String> {
+    let guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    Ok(guard.chat_history.clone())
+}
+
+#[tauri::command]
+pub fn set_avatar(
+    runtime: State<'_, SharedRuntime>,
+    avatar_id: String,
+) -> Result<(), String> {
+    let mut guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    guard.avatar_id = avatar_id;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_session_memory(
+    runtime: State<'_, SharedRuntime>,
+) -> Result<crate::llm::memory::SessionMemory, String> {
+    let guard = runtime
+        .0
+        .lock()
+        .map_err(|error| format!("failed to lock runtime: {error}"))?;
+    Ok(guard.session_memory.clone())
 }
 
 #[cfg(test)]
@@ -317,12 +321,7 @@ mod tests {
         engine::models::UserEventType,
         runtime::{RuntimeState, SharedRuntime},
     };
-    use std::{
-        env,
-        sync::{mpsc::channel, Arc, Mutex, Mutex as StdMutex},
-    };
-
-    static ENV_LOCK: StdMutex<()> = StdMutex::new(());
+    use std::sync::{mpsc::channel, Arc, Mutex};
 
     fn test_runtime(seed: u64) -> SharedRuntime {
         SharedRuntime(Arc::new(Mutex::new(RuntimeState::with_seed(seed))))
@@ -416,65 +415,43 @@ mod tests {
     }
 
     #[test]
-    fn request_llm_reply_returns_not_configured_without_endpoint() {
-        let _env_guard = ENV_LOCK.lock().expect("env lock");
-        let existing_endpoint = env::var("TOKKI_LLM_ENDPOINT").ok();
-        env::remove_var("TOKKI_LLM_ENDPOINT");
-
-        let response = request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("hello"),
-            endpoint: None,
-            model: None,
-        })
-        .expect("request should not fail");
-
-        if let Some(value) = existing_endpoint {
-            env::set_var("TOKKI_LLM_ENDPOINT", value);
-        }
-
-        assert_eq!(response, LLM_NOT_CONFIGURED);
+    fn llm_response_maps_to_action() {
+        let response = LlmResponse {
+            line: "Hello!".to_string(),
+            mood: Mood::Playful,
+            animation: "idle.hop".to_string(),
+            intent: "greet".to_string(),
+        };
+        let action = llm_response_to_action(&response);
+        assert_eq!(action.id, "idle_hop");
+        assert_eq!(action.mood, Mood::Playful);
     }
 
     #[test]
-    fn extract_llm_text_reads_chat_completion_shape() {
-        let payload = serde_json::json!({
-            "choices": [
-                {
-                    "message": {
-                        "content": "hi there"
-                    }
-                }
-            ]
-        });
-
-        let text = extract_llm_text(&payload);
-        assert_eq!(text.as_deref(), Some("hi there"));
+    fn intent_energy_greet_boosts() {
+        assert_eq!(apply_intent_energy(50, "greet"), 65);
+        assert_eq!(apply_intent_energy(50, "joke"), 65);
     }
 
     #[test]
-    fn standard_endpoint_validation_accepts_openai_and_azure_shapes() {
-        assert!(is_standard_llm_endpoint(
-            "https://api.openai.com/v1/responses"
-        ));
-        assert!(is_standard_llm_endpoint(
-            "https://api.openai.com/v1/chat/completions"
-        ));
-        assert!(is_standard_llm_endpoint(
-            "https://example.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2024-10-21"
-        ));
+    fn intent_energy_goodbye_drains() {
+        assert_eq!(apply_intent_energy(50, "goodbye"), 40);
+        assert_eq!(apply_intent_energy(5, "goodbye"), 0);
     }
 
     #[test]
-    fn request_llm_reply_rejects_non_standard_endpoint() {
-        let response = request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("hello"),
-            endpoint: Some(String::from(
-                "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
-            )),
-            model: None,
-        });
+    fn intent_energy_help_small_boost() {
+        assert_eq!(apply_intent_energy(50, "help"), 55);
+        assert_eq!(apply_intent_energy(50, "think"), 55);
+    }
 
-        let error = response.expect_err("non-standard endpoint should fail");
-        assert_eq!(error, INVALID_LLM_ENDPOINT);
+    #[test]
+    fn intent_energy_none_unchanged() {
+        assert_eq!(apply_intent_energy(50, "none"), 50);
+    }
+
+    #[test]
+    fn intent_energy_caps_at_100() {
+        assert_eq!(apply_intent_energy(95, "greet"), 100);
     }
 }

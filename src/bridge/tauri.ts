@@ -3,29 +3,27 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   createInitialTokkiState,
+  type AvatarId,
   type BehaviorAction,
   type BehaviorTickPayload,
+  type ChatMessage,
+  type ChatResponse,
+  type LlmResponse,
+  type SessionMemory,
   type TokkiState,
   type TransitionReason,
   type UserEvent
 } from "../types/tokki";
 
 const BEHAVIOR_TICK_EVENT = "tokki://behavior_tick";
-const LLM_NOT_CONFIGURED = "llm not configured";
-const INVALID_LLM_ENDPOINT =
-  "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
 
 type TickHandler = (payload: BehaviorTickPayload) => void;
-
-export interface LlmRequestOptions {
-  endpoint?: string;
-  model?: string;
-}
 
 const fallbackListeners = new Set<TickHandler>();
 let fallbackLoop: ReturnType<typeof setInterval> | null = null;
 let fallbackState: TokkiState = createInitialTokkiState();
 let fallbackSeed = 1337;
+let fallbackChatHistory: ChatMessage[] = [];
 
 function isTauriRuntime(): boolean {
   if (typeof window === "undefined") {
@@ -33,43 +31,6 @@ function isTauriRuntime(): boolean {
   }
 
   return "__TAURI_INTERNALS__" in window;
-}
-
-function sanitizeValue(value?: string): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function resolveLlmEndpoint(overrideEndpoint?: string): string | null {
-  const fromOverride = sanitizeValue(overrideEndpoint);
-  if (fromOverride) {
-    return fromOverride;
-  }
-
-  return sanitizeValue(import.meta.env.VITE_LLM_ENDPOINT as string | undefined);
-}
-
-function isStandardLlmEndpoint(endpoint: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(endpoint);
-  } catch {
-    return false;
-  }
-
-  const path = url.pathname.replace(/\/+$/, "").toLowerCase();
-  if (path.endsWith("/v1/responses") || path.endsWith("/v1/chat/completions")) {
-    return true;
-  }
-
-  return (
-    path.includes("/openai/deployments/") &&
-    (path.endsWith("/chat/completions") || path.endsWith("/responses"))
-  );
 }
 
 function seededRandom(): number {
@@ -186,6 +147,28 @@ function emitFallback(reason: TransitionReason, event?: UserEvent): BehaviorTick
   return tick;
 }
 
+const CANNED_REPLIES: Array<{ line: string; mood: LlmResponse["mood"]; intent: string }> = [
+  { line: "Hi there! I'm Tokki, your desktop buddy!", mood: "playful", intent: "greet" },
+  { line: "Hmm, that's interesting... let me think about that!", mood: "curious", intent: "think" },
+  { line: "Hehe, you're fun to talk to!", mood: "playful", intent: "joke" },
+  { line: "I'm just a little rabbit living on your screen~", mood: "idle", intent: "none" },
+  { line: "*wiggles ears* Did you need something?", mood: "curious", intent: "help" },
+  { line: "Zzz... oh! Sorry, dozed off for a sec.", mood: "sleepy", intent: "none" },
+  { line: "Whoa, that's quite a question!", mood: "surprised", intent: "think" },
+];
+
+function fallbackChatReply(message: string): LlmResponse {
+  const lower = message.toLowerCase();
+  if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+    return { ...CANNED_REPLIES[0], animation: "idle.hop" };
+  }
+  if (lower.includes("?")) {
+    return { ...CANNED_REPLIES[1], animation: "idle.look" };
+  }
+  const pick = Math.floor(seededRandom() * CANNED_REPLIES.length);
+  return { ...CANNED_REPLIES[pick], animation: "idle.blink" };
+}
+
 export function parseBehaviorTickPayload(value: unknown): BehaviorTickPayload | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -284,27 +267,55 @@ export async function subscribeBehaviorTick(handler: TickHandler): Promise<() =>
   };
 }
 
-export async function requestLlmReply(
-  prompt: string,
-  options: LlmRequestOptions = {}
-): Promise<string> {
-  const endpoint = resolveLlmEndpoint(options.endpoint);
-  if (!endpoint) {
-    return LLM_NOT_CONFIGURED;
-  }
-  if (!isStandardLlmEndpoint(endpoint)) {
-    throw new Error(INVALID_LLM_ENDPOINT);
-  }
-
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
   if (isTauriRuntime()) {
-    return invoke<string>("request_llm_reply", {
-      request: {
-        prompt,
-        endpoint,
-        model: options.model
-      }
-    });
+    return invoke<ChatResponse>("send_chat_message", { message });
   }
 
-  return LLM_NOT_CONFIGURED;
+  const now = Date.now();
+  fallbackChatHistory.push({
+    role: "user",
+    content: message,
+    timestamp: now,
+  });
+
+  // Simulate typing delay
+  await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
+
+  const reply = fallbackChatReply(message);
+  fallbackChatHistory.push({
+    role: "assistant",
+    content: reply.line,
+    timestamp: Date.now(),
+  });
+
+  const tick = emitFallback("manual");
+
+  return { reply, tick };
+}
+
+export async function getChatHistory(): Promise<ChatMessage[]> {
+  if (isTauriRuntime()) {
+    return invoke<ChatMessage[]>("get_chat_history");
+  }
+  return fallbackChatHistory;
+}
+
+export async function setAvatar(avatarId: AvatarId): Promise<void> {
+  if (isTauriRuntime()) {
+    await invoke("set_avatar", { avatarId });
+  }
+}
+
+export async function getSessionMemory(): Promise<SessionMemory> {
+  if (isTauriRuntime()) {
+    return invoke<SessionMemory>("get_session_memory");
+  }
+  return {
+    user_name: null,
+    topics: [],
+    message_count: 0,
+    greet_count: 0,
+    mood_trend: "",
+  };
 }
