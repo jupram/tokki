@@ -17,6 +17,7 @@ import { AvatarPicker } from "./AvatarPicker";
 import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
+import { FXLayer } from "./avatars/particles/FXLayer";
 
 type HoverDecoration = "stars";
 
@@ -298,6 +299,7 @@ export function TokkiCharacter(): JSX.Element {
         >
           <TokkiAvatarAsset assetId={actionView.assetId} />
         </button>
+        <FXLayer />
       </div>
 
       {chatPanelVisible && (
