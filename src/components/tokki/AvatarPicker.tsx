@@ -1,12 +1,7 @@
 import { setAvatar } from "../../bridge/tauri";
 import { useTokkiStore } from "../../state/useTokkiStore";
 import type { AvatarId } from "../../types/tokki";
-
-const AVATARS: { id: AvatarId; label: string; emoji: string }[] = [
-  { id: "rabbit_v1", label: "Rabbit", emoji: "🐰" },
-  { id: "cat_v1", label: "Cat", emoji: "🐱" },
-  { id: "fox_v1", label: "Fox", emoji: "🦊" },
-];
+import { getAllAvatars } from "./avatars";
 
 export function AvatarPicker(): JSX.Element {
   const avatarId = useTokkiStore((s) => s.avatarId);
@@ -17,9 +12,11 @@ export function AvatarPicker(): JSX.Element {
     void setAvatar(id);
   };
 
+  const avatars = getAllAvatars();
+
   return (
     <div className="avatar-picker" role="radiogroup" aria-label="Choose avatar">
-      {AVATARS.map((a) => (
+      {avatars.map((a) => (
         <button
           key={a.id}
           type="button"

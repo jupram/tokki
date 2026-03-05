@@ -792,14 +792,18 @@ body {
 
 .avatar-picker {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 6px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .avatar-picker__btn {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 1.5px solid rgba(180, 150, 120, 0.2);
   background: rgba(255, 252, 245, 0.85);
@@ -823,7 +827,7 @@ body {
 }
 
 .avatar-picker__emoji {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1;
 }
 
