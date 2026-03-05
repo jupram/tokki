@@ -917,3 +917,143 @@ body {
     height: 96px;
   }
 }
+
+/* ── Particle FX keyframes ──────────────────────── */
+
+.fx-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.fx-ember {
+  animation: ember-rise 2s ease-out infinite both;
+}
+
+.fx-petal {
+  animation: petal-drift 3s ease-in-out infinite both;
+}
+
+.fx-snow {
+  animation: snow-fall 3s linear infinite both;
+}
+
+.fx-wisp {
+  animation: wisp-orbit 2.5s ease-in-out infinite both;
+}
+
+.fx-star {
+  animation: star-twinkle 1.8s ease-in-out infinite both;
+}
+
+.fx-ink {
+  animation: ink-dissolve 2s ease-out infinite both;
+}
+
+@keyframes ember-rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-18px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-35px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes petal-drift {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0.8;
+  }
+  33% {
+    transform: translate(8px, 12px) rotate(60deg);
+    opacity: 0.7;
+  }
+  66% {
+    transform: translate(-4px, 25px) rotate(150deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(6px, 40px) rotate(240deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.75;
+  }
+  25% {
+    transform: translateY(10px) translateX(3px);
+  }
+  50% {
+    transform: translateY(20px) translateX(-2px);
+    opacity: 0.6;
+  }
+  75% {
+    transform: translateY(30px) translateX(4px);
+  }
+  100% {
+    transform: translateY(40px) translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes wisp-orbit {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translate(6px, -8px) scale(1.2);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(0, -12px) scale(1);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-6px, -6px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+}
+
+@keyframes star-twinkle {
+  0%, 100% {
+    transform: scale(0.5);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+}
+
+@keyframes ink-dissolve {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}

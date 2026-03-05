@@ -15,6 +15,7 @@ import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { AvatarPicker } from "./AvatarPicker";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
+import { FXLayer } from "./avatars/particles/FXLayer";
 
 function makeUserEvent(type: UserEvent["type"]): UserEvent {
   return {
@@ -169,6 +170,7 @@ export function TokkiCharacter(): JSX.Element {
         >
           <TokkiAvatarAsset assetId={actionView.assetId} />
         </button>
+        <FXLayer />
       </div>
 
       {chatOpen && (
