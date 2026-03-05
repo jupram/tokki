@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import {
   createInitialTokkiState,
   type AvatarId,
@@ -16,8 +16,16 @@ import {
 } from "../types/tokki";
 
 const BEHAVIOR_TICK_EVENT = "tokki://behavior_tick";
+const LLM_NOT_CONFIGURED = "llm not configured";
+const INVALID_LLM_ENDPOINT =
+  "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
 
 type TickHandler = (payload: BehaviorTickPayload) => void;
+
+export interface LlmRequestOptions {
+  endpoint?: string;
+  model?: string;
+}
 
 const fallbackListeners = new Set<TickHandler>();
 let fallbackLoop: ReturnType<typeof setInterval> | null = null;
@@ -25,12 +33,52 @@ let fallbackState: TokkiState = createInitialTokkiState();
 let fallbackSeed = 1337;
 let fallbackChatHistory: ChatMessage[] = [];
 
+const COLLAPSED_WINDOW_SIZE = { width: 180, height: 180 };
+const EXPANDED_WINDOW_SIZE = { width: 320, height: 290 };
+
 function isTauriRuntime(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
 
   return "__TAURI_INTERNALS__" in window;
+}
+
+function sanitizeValue(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveLlmEndpoint(overrideEndpoint?: string): string | null {
+  const fromOverride = sanitizeValue(overrideEndpoint);
+  if (fromOverride) {
+    return fromOverride;
+  }
+
+  return sanitizeValue(import.meta.env.VITE_LLM_ENDPOINT as string | undefined);
+}
+
+function isStandardLlmEndpoint(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+
+  const path = url.pathname.replace(/\/+$/, "").toLowerCase();
+  if (path.endsWith("/v1/responses") || path.endsWith("/v1/chat/completions")) {
+    return true;
+  }
+
+  return (
+    path.includes("/openai/deployments/") &&
+    (path.endsWith("/chat/completions") || path.endsWith("/responses"))
+  );
 }
 
 function seededRandom(): number {
@@ -169,6 +217,27 @@ function fallbackChatReply(message: string): LlmResponse {
   return { ...CANNED_REPLIES[pick], animation: "idle.blink" };
 }
 
+async function sendFallbackChatMessage(message: string): Promise<ChatResponse> {
+  const now = Date.now();
+  fallbackChatHistory.push({
+    role: "user",
+    content: message,
+    timestamp: now
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
+
+  const reply = fallbackChatReply(message);
+  fallbackChatHistory.push({
+    role: "assistant",
+    content: reply.line,
+    timestamp: Date.now()
+  });
+
+  const tick = emitFallback("manual");
+  return { reply, tick };
+}
+
 export function parseBehaviorTickPayload(value: unknown): BehaviorTickPayload | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -241,6 +310,19 @@ export async function startWindowDrag(): Promise<void> {
   await getCurrentWindow().startDragging();
 }
 
+export async function setChatPanelOpen(open: boolean): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  const target = open ? EXPANDED_WINDOW_SIZE : COLLAPSED_WINDOW_SIZE;
+  try {
+    await getCurrentWindow().setSize(new LogicalSize(target.width, target.height));
+  } catch {
+    return;
+  }
+}
+
 export async function getCurrentState(): Promise<TokkiState> {
   if (isTauriRuntime()) {
     return invoke<TokkiState>("get_current_state");
@@ -269,53 +351,81 @@ export async function subscribeBehaviorTick(handler: TickHandler): Promise<() =>
 
 export async function sendChatMessage(message: string): Promise<ChatResponse> {
   if (isTauriRuntime()) {
-    return invoke<ChatResponse>("send_chat_message", { message });
+    try {
+      return await invoke<ChatResponse>("send_chat_message", { message });
+    } catch {
+      return sendFallbackChatMessage(message);
+    }
   }
 
-  const now = Date.now();
-  fallbackChatHistory.push({
-    role: "user",
-    content: message,
-    timestamp: now,
-  });
-
-  // Simulate typing delay
-  await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
-
-  const reply = fallbackChatReply(message);
-  fallbackChatHistory.push({
-    role: "assistant",
-    content: reply.line,
-    timestamp: Date.now(),
-  });
-
-  const tick = emitFallback("manual");
-
-  return { reply, tick };
+  return sendFallbackChatMessage(message);
 }
 
 export async function getChatHistory(): Promise<ChatMessage[]> {
   if (isTauriRuntime()) {
-    return invoke<ChatMessage[]>("get_chat_history");
+    try {
+      return await invoke<ChatMessage[]>("get_chat_history");
+    } catch {
+      return fallbackChatHistory;
+    }
   }
   return fallbackChatHistory;
 }
 
 export async function setAvatar(avatarId: AvatarId): Promise<void> {
   if (isTauriRuntime()) {
-    await invoke("set_avatar", { avatarId });
+    try {
+      await invoke("set_avatar", { avatarId });
+    } catch {
+      return;
+    }
   }
 }
 
 export async function getSessionMemory(): Promise<SessionMemory> {
   if (isTauriRuntime()) {
-    return invoke<SessionMemory>("get_session_memory");
+    try {
+      return await invoke<SessionMemory>("get_session_memory");
+    } catch {
+      return {
+        user_name: null,
+        topics: [],
+        message_count: 0,
+        greet_count: 0,
+        mood_trend: ""
+      };
+    }
   }
   return {
     user_name: null,
     topics: [],
     message_count: 0,
     greet_count: 0,
-    mood_trend: "",
+    mood_trend: ""
   };
+}
+
+export async function requestLlmReply(
+  prompt: string,
+  options: LlmRequestOptions = {}
+): Promise<string> {
+  const endpoint = resolveLlmEndpoint(options.endpoint);
+  if (!endpoint) {
+    return LLM_NOT_CONFIGURED;
+  }
+  if (!isStandardLlmEndpoint(endpoint)) {
+    throw new Error(INVALID_LLM_ENDPOINT);
+  }
+
+  if (isTauriRuntime()) {
+    return invoke<string>("request_llm_reply", {
+      request: {
+        prompt,
+        endpoint,
+        model: options.model
+      }
+    });
+  }
+
+  return LLM_NOT_CONFIGURED;
 }

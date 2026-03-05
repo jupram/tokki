@@ -917,3 +917,71 @@ body {
     height: 96px;
   }
 }
+
+@media (max-width: 220px), (max-height: 230px) {
+  .tokki-card--chat-open .chat-bubble {
+    position: relative;
+    width: max-content;
+    max-width: 156px;
+    min-height: 18px;
+    margin: 0 0 3px;
+    padding: 4px 6px;
+  }
+
+  .tokki-card--chat-open .chat-bubble__text {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .tokki-card--chat-open .chat-bubble__tail {
+    display: none;
+  }
+
+  .tokki-card--chat-open .tokki-stage {
+    margin-top: 0;
+  }
+
+  .tokki-card--chat-open .tokki-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .tokki-card--chat-open .tokki-avatar .tokki-asset {
+    width: 76px;
+    height: 76px;
+  }
+
+  .tokki-card--chat-open .tokki-chat-panel {
+    max-width: 156px;
+    margin-top: 2px;
+  }
+
+  .tokki-card--chat-open .avatar-picker {
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+
+  .tokki-card--chat-open .avatar-picker__btn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tokki-card--chat-open .avatar-picker__emoji {
+    font-size: 10px;
+  }
+
+  .tokki-card--chat-open .chat-input {
+    gap: 3px;
+    padding: 2px 2px 2px 8px;
+  }
+
+  .tokki-card--chat-open .chat-input__field {
+    font-size: 10px;
+    padding: 1px 0;
+  }
+
+  .tokki-card--chat-open .chat-input__send {
+    width: 20px;
+    height: 20px;
+  }
+}

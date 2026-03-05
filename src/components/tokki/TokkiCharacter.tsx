@@ -4,6 +4,7 @@ import {
   getCurrentState,
   handleUserInteraction,
   sendChatMessage,
+  setChatPanelOpen,
   startBehaviorLoop,
   startWindowDrag,
   stopBehaviorLoop,
@@ -70,6 +71,10 @@ export function TokkiCharacter(): JSX.Element {
       void stopBehaviorLoop();
     };
   }, [applyTick, setConnected, setState]);
+
+  useEffect(() => {
+    void setChatPanelOpen(chatOpen);
+  }, [chatOpen]);
 
   const onInteract = async (type: UserEvent["type"]): Promise<void> => {
     const tick = await handleUserInteraction(makeUserEvent(type));
@@ -148,7 +153,11 @@ export function TokkiCharacter(): JSX.Element {
   const actionView = mapActionToView(state.current_action, avatarId);
 
   return (
-    <section className="tokki-card" aria-label="Tokki" data-tauri-drag-region>
+    <section
+      className={`tokki-card ${chatOpen ? "tokki-card--chat-open" : ""}`}
+      aria-label="Tokki"
+      data-tauri-drag-region
+    >
       <ChatBubble reply={currentReply} isTyping={isTyping} />
 
       <div className="tokki-stage" data-tauri-drag-region>
