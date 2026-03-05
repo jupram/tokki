@@ -4,7 +4,7 @@ Tokki is a compact desktop micro-companion built with Tauri + React. It runs an 
 
 ## Current Status (March 5, 2026)
 
-Core runtime is implemented and working end-to-end, with initial LLM request plumbing available from the Tauri command layer.
+Core runtime is implemented and working end-to-end, and chat now uses the Tauri `request_llm_reply` path when an LLM endpoint is configured.
 
 ## What Has Been Achieved So Far
 
@@ -32,6 +32,9 @@ Core runtime is implemented and working end-to-end, with initial LLM request plu
   - Missing endpoint returns `llm not configured`.
   - Non-standard endpoints are rejected.
   - Supported endpoint shapes are OpenAI-compatible (`/v1/responses`, `/v1/chat/completions`) and Azure OpenAI deployment equivalents.
+- Chat behavior is wired with graceful fallback:
+  - If LLM endpoint is configured, Tokki requests live replies via `request_llm_reply`.
+  - If no endpoint is configured, Tokki falls back to canned/local replies.
 - Stability fixes were added:
   - Runtime state recovery when the behavior loop exits.
   - More reliable drag handling for Tokki interactions.
@@ -45,7 +48,6 @@ Core runtime is implemented and working end-to-end, with initial LLM request plu
 
 ## Known Gaps (Not Done Yet)
 
-- No chat UI wired to `request_llm_reply` yet.
 - No conversation memory or persistent profile/state.
 - No intent planner that maps language to richer behavior sequences.
 - No streaming/tool-calling orchestration for LLM responses.
@@ -54,12 +56,11 @@ Core runtime is implemented and working end-to-end, with initial LLM request plu
 
 Focus: conversational intelligence and persistent behavior context.
 
-1. Connect chat UI input/output to the `request_llm_reply` command.
-2. Define a strict structured response schema (`line`, `mood`, `animation`, `intent`) and validation path.
-3. Add session memory + lightweight persistence for continuity between interactions.
-4. Map language intents to richer behavior/action sequences.
-5. Expand animation assets and transitions.
-6. Expand tests for LLM parsing, endpoint validation, and intent-to-action mapping.
+1. Define a strict structured response schema (`line`, `mood`, `animation`, `intent`) and validation path.
+2. Add session memory + lightweight persistence for continuity between interactions.
+3. Map language intents to richer behavior/action sequences.
+4. Expand animation assets and transitions.
+5. Expand tests for LLM parsing, endpoint validation, and intent-to-action mapping.
 
 ## Local Development
 
