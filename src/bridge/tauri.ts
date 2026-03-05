@@ -217,6 +217,18 @@ function fallbackChatReply(message: string): LlmResponse {
   return { ...CANNED_REPLIES[pick], animation: "idle.blink" };
 }
 
+function toLlmResponse(line: string): LlmResponse {
+  const trimmed = line.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("?")) {
+    return { line: trimmed, mood: "curious", animation: "idle.look", intent: "think" };
+  }
+  if (lower.includes("!") || lower.includes("great")) {
+    return { line: trimmed, mood: "playful", animation: "idle.hop", intent: "chat" };
+  }
+  return { line: trimmed, mood: "idle", animation: "idle.blink", intent: "chat" };
+}
+
 async function sendFallbackChatMessage(message: string): Promise<ChatResponse> {
   const now = Date.now();
   fallbackChatHistory.push({
@@ -350,52 +362,35 @@ export async function subscribeBehaviorTick(handler: TickHandler): Promise<() =>
 }
 
 export async function sendChatMessage(message: string): Promise<ChatResponse> {
-  if (isTauriRuntime()) {
-    try {
-      return await invoke<ChatResponse>("send_chat_message", { message });
-    } catch {
-      return sendFallbackChatMessage(message);
-    }
+  const llmText = await requestLlmReply(message);
+  if (llmText === LLM_NOT_CONFIGURED) {
+    return sendFallbackChatMessage(message);
+  }
+  if (!llmText.trim()) {
+    return sendFallbackChatMessage(message);
   }
 
-  return sendFallbackChatMessage(message);
+  const now = Date.now();
+  const reply = toLlmResponse(llmText);
+  fallbackChatHistory.push({ role: "user", content: message, timestamp: now });
+  fallbackChatHistory.push({
+    role: "assistant",
+    content: reply.line,
+    timestamp: Date.now()
+  });
+  const tick = emitFallback("manual");
+  return { reply, tick };
 }
 
 export async function getChatHistory(): Promise<ChatMessage[]> {
-  if (isTauriRuntime()) {
-    try {
-      return await invoke<ChatMessage[]>("get_chat_history");
-    } catch {
-      return fallbackChatHistory;
-    }
-  }
   return fallbackChatHistory;
 }
 
 export async function setAvatar(avatarId: AvatarId): Promise<void> {
-  if (isTauriRuntime()) {
-    try {
-      await invoke("set_avatar", { avatarId });
-    } catch {
-      return;
-    }
-  }
+  void avatarId;
 }
 
 export async function getSessionMemory(): Promise<SessionMemory> {
-  if (isTauriRuntime()) {
-    try {
-      return await invoke<SessionMemory>("get_session_memory");
-    } catch {
-      return {
-        user_name: null,
-        topics: [],
-        message_count: 0,
-        greet_count: 0,
-        mood_trend: ""
-      };
-    }
-  }
   return {
     user_name: null,
     topics: [],
@@ -410,10 +405,7 @@ export async function requestLlmReply(
   options: LlmRequestOptions = {}
 ): Promise<string> {
   const endpoint = resolveLlmEndpoint(options.endpoint);
-  if (!endpoint) {
-    return LLM_NOT_CONFIGURED;
-  }
-  if (!isStandardLlmEndpoint(endpoint)) {
+  if (endpoint && !isStandardLlmEndpoint(endpoint)) {
     throw new Error(INVALID_LLM_ENDPOINT);
   }
 
@@ -421,7 +413,7 @@ export async function requestLlmReply(
     return invoke<string>("request_llm_reply", {
       request: {
         prompt,
-        endpoint,
+        endpoint: endpoint ?? undefined,
         model: options.model
       }
     });
