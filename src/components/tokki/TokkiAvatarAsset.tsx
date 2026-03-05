@@ -27,8 +27,9 @@ function RabbitAsset(): JSX.Element {
       <ellipse className="tokki-cheek tokki-cheek--left" cx="58" cy="87" rx="7" ry="4" />
       <ellipse className="tokki-cheek tokki-cheek--right" cx="102" cy="87" rx="7" ry="4" />
       <path className="tokki-mouth" d="M72 91 Q80 100 88 91" />
-      <circle className="tokki-snore tokki-snore--a" cx="116" cy="71" r="4.2" />
-      <circle className="tokki-snore tokki-snore--b" cx="123" cy="62" r="2.8" />
+      <circle className="tokki-snore tokki-snore--a" cx="116" cy="71" r="5.2" />
+      <circle className="tokki-snore tokki-snore--b" cx="124" cy="62" r="4.1" />
+      <circle className="tokki-snore tokki-snore--c" cx="131" cy="54" r="3.1" />
       <circle className="tokki-paw tokki-paw--left" cx="66" cy="112" r="10.5" />
       <circle className="tokki-paw tokki-paw--right" cx="94" cy="112" r="10.5" />
     </svg>

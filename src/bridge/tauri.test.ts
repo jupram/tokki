@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBehaviorTickPayload } from "./tauri";
+import { parseBehaviorTickPayload, requestLlmReply } from "./tauri";
 import { createInitialTokkiState } from "../types/tokki";
 
 describe("parseBehaviorTickPayload", () => {
@@ -21,5 +21,23 @@ describe("parseBehaviorTickPayload", () => {
         reason: "unknown"
       })
     ).toBeNull();
+  });
+});
+
+describe("requestLlmReply", () => {
+  it("returns fallback text when endpoint is not configured", async () => {
+    await expect(requestLlmReply("hello", { endpoint: "  " })).resolves.toBe(
+      "llm not configured"
+    );
+  });
+
+  it("rejects non-standard endpoints", async () => {
+    await expect(
+      requestLlmReply("hello", {
+        endpoint: "https://defensiveapi.azurewebsites.net/codexinference/RunModel"
+      })
+    ).rejects.toThrow(
+      "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)"
+    );
   });
 });

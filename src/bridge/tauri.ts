@@ -11,8 +11,16 @@ import {
 } from "../types/tokki";
 
 const BEHAVIOR_TICK_EVENT = "tokki://behavior_tick";
+const LLM_NOT_CONFIGURED = "llm not configured";
+const INVALID_LLM_ENDPOINT =
+  "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
 
 type TickHandler = (payload: BehaviorTickPayload) => void;
+
+export interface LlmRequestOptions {
+  endpoint?: string;
+  model?: string;
+}
 
 const fallbackListeners = new Set<TickHandler>();
 let fallbackLoop: ReturnType<typeof setInterval> | null = null;
@@ -25,6 +33,43 @@ function isTauriRuntime(): boolean {
   }
 
   return "__TAURI_INTERNALS__" in window;
+}
+
+function sanitizeValue(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveLlmEndpoint(overrideEndpoint?: string): string | null {
+  const fromOverride = sanitizeValue(overrideEndpoint);
+  if (fromOverride) {
+    return fromOverride;
+  }
+
+  return sanitizeValue(import.meta.env.VITE_LLM_ENDPOINT as string | undefined);
+}
+
+function isStandardLlmEndpoint(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+
+  const path = url.pathname.replace(/\/+$/, "").toLowerCase();
+  if (path.endsWith("/v1/responses") || path.endsWith("/v1/chat/completions")) {
+    return true;
+  }
+
+  return (
+    path.includes("/openai/deployments/") &&
+    (path.endsWith("/chat/completions") || path.endsWith("/responses"))
+  );
 }
 
 function seededRandom(): number {
@@ -237,4 +282,29 @@ export async function subscribeBehaviorTick(handler: TickHandler): Promise<() =>
   return () => {
     fallbackListeners.delete(handler);
   };
+}
+
+export async function requestLlmReply(
+  prompt: string,
+  options: LlmRequestOptions = {}
+): Promise<string> {
+  const endpoint = resolveLlmEndpoint(options.endpoint);
+  if (!endpoint) {
+    return LLM_NOT_CONFIGURED;
+  }
+  if (!isStandardLlmEndpoint(endpoint)) {
+    throw new Error(INVALID_LLM_ENDPOINT);
+  }
+
+  if (isTauriRuntime()) {
+    return invoke<string>("request_llm_reply", {
+      request: {
+        prompt,
+        endpoint,
+        model: options.model
+      }
+    });
+  }
+
+  return LLM_NOT_CONFIGURED;
 }

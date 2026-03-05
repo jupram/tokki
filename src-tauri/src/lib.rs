@@ -14,7 +14,8 @@ pub fn run() {
             commands::stop_behavior_loop,
             commands::handle_user_interaction,
             commands::get_current_state,
-            commands::advance_tick
+            commands::advance_tick,
+            commands::request_llm_reply
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

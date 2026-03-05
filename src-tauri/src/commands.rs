@@ -3,6 +3,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use reqwest::{blocking::Client, Url};
+use serde::Deserialize;
+use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::{
@@ -16,6 +19,143 @@ fn now_millis() -> u64 {
         Ok(duration) => duration.as_millis() as u64,
         Err(_) => 0,
     }
+}
+
+const LLM_NOT_CONFIGURED: &str = "llm not configured";
+const INVALID_LLM_ENDPOINT: &str =
+    "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
+
+#[derive(Debug, Deserialize)]
+pub struct LlmInteractionRequest {
+    pub prompt: String,
+    pub endpoint: Option<String>,
+    pub model: Option<String>,
+}
+
+fn sanitize_non_empty(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(String::from)
+}
+
+fn env_non_empty(key: &str) -> Option<String> {
+    sanitize_non_empty(std::env::var(key).ok().as_deref())
+}
+
+fn resolve_llm_endpoint(override_endpoint: Option<&str>) -> Option<String> {
+    sanitize_non_empty(override_endpoint).or_else(|| env_non_empty("TOKKI_LLM_ENDPOINT"))
+}
+
+fn resolve_llm_model(override_model: Option<&str>) -> String {
+    sanitize_non_empty(override_model)
+        .or_else(|| env_non_empty("TOKKI_LLM_MODEL"))
+        .unwrap_or_else(|| String::from("gpt-4o-mini"))
+}
+
+fn is_standard_llm_endpoint(endpoint: &str) -> bool {
+    let url = match Url::parse(endpoint) {
+        Ok(url) => url,
+        Err(_) => return false,
+    };
+
+    let path = url.path().trim_end_matches('/').to_ascii_lowercase();
+    if path.ends_with("/v1/responses") || path.ends_with("/v1/chat/completions") {
+        return true;
+    }
+
+    path.contains("/openai/deployments/")
+        && (path.ends_with("/chat/completions") || path.ends_with("/responses"))
+}
+
+fn extract_llm_text(payload: &Value) -> Option<String> {
+    if let Some(output_text) = payload.get("output_text").and_then(Value::as_str) {
+        let text = output_text.trim();
+        if !text.is_empty() {
+            return Some(String::from(text));
+        }
+    }
+
+    if let Some(text) = payload.get("text").and_then(Value::as_str) {
+        let text = text.trim();
+        if !text.is_empty() {
+            return Some(String::from(text));
+        }
+    }
+
+    if let Some(reply) = payload.get("reply").and_then(Value::as_str) {
+        let reply = reply.trim();
+        if !reply.is_empty() {
+            return Some(String::from(reply));
+        }
+    }
+
+    payload
+        .get("choices")
+        .and_then(Value::as_array)
+        .and_then(|choices| choices.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|content| !content.is_empty())
+        .map(String::from)
+}
+
+fn call_llm_endpoint(
+    endpoint: &str,
+    prompt: &str,
+    model: &str,
+    api_key: Option<&str>,
+) -> Result<String, String> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|error| format!("failed to create llm client: {error}"))?;
+
+    let is_responses_api = endpoint.trim_end_matches('/').ends_with("/responses");
+    let request_body = if is_responses_api {
+        serde_json::json!({
+            "model": model,
+            "input": prompt
+        })
+    } else {
+        serde_json::json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        })
+    };
+
+    let mut request = client.post(endpoint).json(&request_body);
+    if let Some(secret) = api_key {
+        request = request.bearer_auth(secret);
+    }
+
+    let response = request
+        .send()
+        .map_err(|error| format!("llm request failed: {error}"))?;
+    let status = response.status();
+    let payload = response
+        .json::<Value>()
+        .map_err(|error| format!("failed to parse llm response: {error}"))?;
+
+    if !status.is_success() {
+        if let Some(error_message) = payload
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+        {
+            return Err(format!("llm request failed ({status}): {error_message}"));
+        }
+        return Err(format!("llm request failed with status {status}"));
+    }
+
+    extract_llm_text(&payload).ok_or_else(|| String::from("llm response missing text content"))
 }
 
 fn stop_loop_state(runtime: &SharedRuntime) -> Result<Option<mpsc::Sender<()>>, String> {
@@ -155,6 +295,21 @@ pub fn advance_tick(
     Ok(tick)
 }
 
+#[tauri::command]
+pub fn request_llm_reply(request: LlmInteractionRequest) -> Result<String, String> {
+    let endpoint = match resolve_llm_endpoint(request.endpoint.as_deref()) {
+        Some(endpoint) => endpoint,
+        None => return Ok(String::from(LLM_NOT_CONFIGURED)),
+    };
+    if !is_standard_llm_endpoint(&endpoint) {
+        return Err(String::from(INVALID_LLM_ENDPOINT));
+    }
+
+    let model = resolve_llm_model(request.model.as_deref());
+    let api_key = env_non_empty("TOKKI_LLM_API_KEY");
+    call_llm_endpoint(&endpoint, &request.prompt, &model, api_key.as_deref())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,7 +317,12 @@ mod tests {
         engine::models::UserEventType,
         runtime::{RuntimeState, SharedRuntime},
     };
-    use std::sync::{mpsc::channel, Arc, Mutex};
+    use std::{
+        env,
+        sync::{mpsc::channel, Arc, Mutex, Mutex as StdMutex},
+    };
+
+    static ENV_LOCK: StdMutex<()> = StdMutex::new(());
 
     fn test_runtime(seed: u64) -> SharedRuntime {
         SharedRuntime(Arc::new(Mutex::new(RuntimeState::with_seed(seed))))
@@ -253,5 +413,68 @@ mod tests {
         let guard = runtime.0.lock().expect("runtime lock");
         assert!(guard.running);
         assert!(guard.stop_tx.is_some());
+    }
+
+    #[test]
+    fn request_llm_reply_returns_not_configured_without_endpoint() {
+        let _env_guard = ENV_LOCK.lock().expect("env lock");
+        let existing_endpoint = env::var("TOKKI_LLM_ENDPOINT").ok();
+        env::remove_var("TOKKI_LLM_ENDPOINT");
+
+        let response = request_llm_reply(LlmInteractionRequest {
+            prompt: String::from("hello"),
+            endpoint: None,
+            model: None,
+        })
+        .expect("request should not fail");
+
+        if let Some(value) = existing_endpoint {
+            env::set_var("TOKKI_LLM_ENDPOINT", value);
+        }
+
+        assert_eq!(response, LLM_NOT_CONFIGURED);
+    }
+
+    #[test]
+    fn extract_llm_text_reads_chat_completion_shape() {
+        let payload = serde_json::json!({
+            "choices": [
+                {
+                    "message": {
+                        "content": "hi there"
+                    }
+                }
+            ]
+        });
+
+        let text = extract_llm_text(&payload);
+        assert_eq!(text.as_deref(), Some("hi there"));
+    }
+
+    #[test]
+    fn standard_endpoint_validation_accepts_openai_and_azure_shapes() {
+        assert!(is_standard_llm_endpoint(
+            "https://api.openai.com/v1/responses"
+        ));
+        assert!(is_standard_llm_endpoint(
+            "https://api.openai.com/v1/chat/completions"
+        ));
+        assert!(is_standard_llm_endpoint(
+            "https://example.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2024-10-21"
+        ));
+    }
+
+    #[test]
+    fn request_llm_reply_rejects_non_standard_endpoint() {
+        let response = request_llm_reply(LlmInteractionRequest {
+            prompt: String::from("hello"),
+            endpoint: Some(String::from(
+                "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
+            )),
+            model: None,
+        });
+
+        let error = response.expect_err("non-standard endpoint should fail");
+        assert_eq!(error, INVALID_LLM_ENDPOINT);
     }
 }
