@@ -45,6 +45,7 @@ body {
 }
 
 .tokki-stage {
+  position: relative;
   display: grid;
   place-items: center;
   margin: 0;
