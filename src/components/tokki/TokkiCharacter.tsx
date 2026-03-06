@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { mapActionToView } from "../../animation/mapActionToView";
 import {
   getCurrentState,
@@ -25,6 +25,7 @@ function makeUserEvent(type: UserEvent["type"]): UserEvent {
 }
 
 const DRAG_THRESHOLD = 4;
+const CHAT_PANEL_EXIT_MS = 220;
 
 export function TokkiCharacter(): JSX.Element {
   const state = useTokkiStore((store) => store.state);
@@ -43,6 +44,9 @@ export function TokkiCharacter(): JSX.Element {
   const addChatMessage = useTokkiStore((store) => store.addChatMessage);
 
   const dragRef = useRef<{ startX: number; startY: number; dragging: boolean } | null>(null);
+  const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [chatPanelVisible, setChatPanelVisible] = useState(chatOpen);
+  const [chatPanelClosing, setChatPanelClosing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -75,6 +79,37 @@ export function TokkiCharacter(): JSX.Element {
   useEffect(() => {
     void setChatPanelOpen(chatOpen);
   }, [chatOpen]);
+
+  useEffect(() => {
+    if (panelTimerRef.current) {
+      clearTimeout(panelTimerRef.current);
+      panelTimerRef.current = null;
+    }
+
+    if (chatOpen) {
+      setChatPanelVisible(true);
+      setChatPanelClosing(false);
+      return;
+    }
+
+    if (chatPanelVisible) {
+      setChatPanelClosing(true);
+      panelTimerRef.current = setTimeout(() => {
+        setChatPanelVisible(false);
+        setChatPanelClosing(false);
+        panelTimerRef.current = null;
+      }, CHAT_PANEL_EXIT_MS);
+    }
+  }, [chatOpen, chatPanelVisible]);
+
+  useEffect(
+    () => () => {
+      if (panelTimerRef.current) {
+        clearTimeout(panelTimerRef.current);
+      }
+    },
+    []
+  );
 
   const onInteract = async (type: UserEvent["type"]): Promise<void> => {
     const tick = await handleUserInteraction(makeUserEvent(type));
@@ -180,8 +215,8 @@ export function TokkiCharacter(): JSX.Element {
         </button>
       </div>
 
-      {chatOpen && (
-        <div className="tokki-chat-panel">
+      {chatPanelVisible && (
+        <div className={`tokki-chat-panel ${chatPanelClosing ? "tokki-chat-panel--closing" : "tokki-chat-panel--open"}`}>
           <AvatarPicker />
           <ChatInput
             onSend={(msg) => {

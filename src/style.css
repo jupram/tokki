@@ -2,6 +2,13 @@
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
   color: #1f1a1a;
   background: transparent;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --motion-state: 560ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -64,28 +71,40 @@ body {
   cursor: grab;
   user-select: none;
   line-height: 0;
-  transition: transform 0.2s ease, filter 0.2s ease;
+  transform-origin: 50% 60%;
+  backface-visibility: hidden;
+  will-change: transform, filter;
+  transition:
+    transform var(--motion-base) var(--ease-out),
+    filter var(--motion-base) var(--ease-standard);
 }
 
-.tokki-avatar:hover {
-  transform: translateY(-2px) scale(1.01);
+@media (hover: hover) and (pointer: fine) {
+  .tokki-avatar:hover {
+    transform: translateY(-3px) scale(1.018);
+    filter: saturate(1.04);
+  }
 }
 
 .tokki-avatar:active {
   cursor: grabbing;
+  transform: scale(0.985);
 }
 
 .tokki-avatar .tokki-asset {
   width: 124px;
   height: 124px;
   overflow: visible;
-  animation: idle-float 2.6s ease-in-out infinite;
+  transform-origin: 50% 58%;
+  will-change: transform;
+  animation: idle-float 3.1s var(--ease-standard) infinite;
 }
 
 .tokki-avatar .tokki-shadow {
   fill: rgba(61, 34, 17, 0.15);
   transform-origin: center;
-  animation: shadow-breathe 2.6s ease-in-out infinite;
+  will-change: transform, opacity;
+  animation: shadow-breathe 3.1s var(--ease-standard) infinite;
 }
 
 .tokki-avatar .tokki-ear-shell,
@@ -93,6 +112,9 @@ body {
   fill: var(--tokki-shell);
   stroke: rgba(58, 30, 18, 0.26);
   stroke-width: 2;
+  transition:
+    fill var(--motion-base) var(--ease-standard),
+    stroke var(--motion-base) var(--ease-standard);
 }
 
 .tokki-avatar .tokki-ear {
@@ -102,17 +124,23 @@ body {
 
 .tokki-avatar .tokki-ear-inner {
   fill: var(--tokki-ear-inner);
+  transition: fill var(--motion-base) var(--ease-standard);
 }
 
 .tokki-avatar .tokki-eye {
   fill: var(--tokki-eye);
   transform-box: fill-box;
   transform-origin: center;
+  transition:
+    fill var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-out);
 }
 
 .tokki-avatar .tokki-cheek {
   fill: var(--tokki-cheek);
   opacity: 0.7;
+  transition: fill var(--motion-base) var(--ease-standard);
 }
 
 .tokki-avatar .tokki-mouth {
@@ -126,6 +154,9 @@ body {
   fill: var(--tokki-paw);
   stroke: rgba(58, 30, 18, 0.2);
   stroke-width: 1.6;
+  transition:
+    fill var(--motion-base) var(--ease-standard),
+    stroke var(--motion-base) var(--ease-standard);
 }
 
 .tokki-avatar .tokki-snore {
@@ -141,72 +172,74 @@ body {
 }
 
 .tokki-avatar.tone-idle {
-  filter: saturate(0.95);
+  filter: saturate(0.95) brightness(0.995);
 }
 
 .tokki-avatar.tone-playful {
   --tokki-shell: #fff0d8;
   --tokki-ear-inner: #ffb3c7;
   --tokki-cheek: #ff9e90;
-  filter: saturate(1.06);
+  filter: saturate(1.08) brightness(1.01);
 }
 
 .tokki-avatar.tone-curious {
   --tokki-shell: #f5f3ff;
   --tokki-ear-inner: #d7cfff;
   --tokki-cheek: #d5c7ff;
+  filter: saturate(1.02) brightness(1.01);
 }
 
 .tokki-avatar.tone-sleepy {
   --tokki-shell: #f1efe8;
   --tokki-ear-inner: #dccfdc;
   --tokki-eye: #5b5660;
-  filter: saturate(0.8);
+  filter: saturate(0.84) brightness(0.985);
 }
 
 .tokki-avatar.tone-surprised {
   --tokki-shell: #fff1eb;
   --tokki-ear-inner: #ffc1b8;
   --tokki-cheek: #ff918a;
+  filter: saturate(1.04) brightness(1.012);
 }
 
 .tokki-avatar.state-idle-blink .tokki-eye {
-  animation: eye-blink 4.2s ease-in-out infinite;
+  animation: eye-blink 5.8s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-idle-hop .tokki-asset {
-  animation: hop 0.95s ease-in-out infinite;
+  animation: hop 1.04s var(--ease-out) infinite;
 }
 
 .tokki-avatar.state-idle-hop .tokki-shadow {
-  animation-duration: 0.95s;
+  animation-duration: 1.04s;
 }
 
 .tokki-avatar.state-idle-look .tokki-asset {
-  animation: look-pan 1.25s ease-in-out infinite;
+  animation: look-pan 2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-idle-look .tokki-eye--left {
-  animation: eye-look-left 1.25s ease-in-out infinite;
+  animation: eye-look-left 2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-idle-look .tokki-eye--right {
-  animation: eye-look-right 1.25s ease-in-out infinite;
+  animation: eye-look-right 2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-asset {
-  animation: nap-breathe 1.6s ease-in-out infinite;
+  animation: nap-breathe 2.4s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-head {
-  animation: nap-head-tilt 2.4s ease-in-out infinite;
+  animation: nap-head-tilt 3.2s var(--ease-standard) infinite;
   transform-origin: center;
 }
 
 .tokki-avatar.state-rest-nap .tokki-eye {
   transform: scaleY(0.12);
   opacity: 0.6;
-  transition: transform 0.4s ease, opacity 0.4s ease;
+  transition: transform var(--motion-slow) var(--ease-standard), opacity var(--motion-slow) var(--ease-standard);
 }
 
 .tokki-avatar.state-rest-nap .tokki-mouth {
@@ -214,51 +247,51 @@ body {
 }
 
 .tokki-avatar.state-rest-nap .tokki-ear--left {
-  animation: ear-droop-left 2.4s ease-in-out infinite;
+  animation: ear-droop-left 3.2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-ear--right {
-  animation: ear-droop-right 2.4s ease-in-out infinite;
+  animation: ear-droop-right 3.2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-snore--a {
-  animation: snore-a 1.6s ease-in-out infinite;
+  animation: snore-a 2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-snore--b {
-  animation: snore-b 1.6s ease-in-out infinite;
+  animation: snore-b 2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-zzz--a {
-  animation: zzz-float-a 2.4s ease-in-out infinite;
+  animation: zzz-float-a 3.2s var(--ease-standard) infinite;
 }
 
 .tokki-avatar.state-rest-nap .tokki-zzz--b {
-  animation: zzz-float-b 2.4s ease-in-out infinite 0.6s;
+  animation: zzz-float-b 3.2s var(--ease-standard) infinite 0.8s;
 }
 
 .tokki-avatar.state-rest-nap .tokki-zzz--c {
-  animation: zzz-float-c 2.4s ease-in-out infinite 1.2s;
+  animation: zzz-float-c 3.2s var(--ease-standard) infinite 1.6s;
 }
 
 .tokki-avatar.state-react-poke .tokki-asset {
-  animation: recoil 0.65s ease-out 1;
+  animation: recoil 680ms var(--ease-out) 1;
 }
 
 .tokki-avatar.state-react-hover .tokki-ear--left {
-  animation: ear-listen-left 0.6s ease-in-out infinite alternate;
+  animation: ear-listen-left 760ms var(--ease-standard) infinite alternate;
 }
 
 .tokki-avatar.state-react-hover .tokki-ear--right {
-  animation: ear-listen-right 0.6s ease-in-out infinite alternate;
+  animation: ear-listen-right 760ms var(--ease-standard) infinite alternate;
 }
 
 .tokki-avatar.state-react-drag .tokki-asset {
-  animation: drag-wobble 0.8s linear infinite;
+  animation: drag-wobble 940ms cubic-bezier(0.32, 0.01, 0.4, 0.99) infinite;
 }
 
 .tokki-avatar.state-react-click .tokki-asset {
-  animation: click-bounce 0.5s cubic-bezier(0.22, 1, 0.36, 1) 1;
+  animation: click-bounce var(--motion-state) var(--ease-spring) 1;
 }
 
 .tokki-debug {
@@ -267,13 +300,16 @@ body {
 
 @keyframes idle-float {
   0% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  50% {
-    transform: translateY(-5px);
+  32% {
+    transform: translate3d(0, -3px, 0) rotate(-0.6deg);
+  }
+  58% {
+    transform: translate3d(0, -6px, 0) rotate(0.35deg);
   }
   100% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
 }
 
@@ -282,9 +318,13 @@ body {
     transform: scaleX(1);
     opacity: 0.15;
   }
-  50% {
+  38% {
+    transform: scaleX(0.93);
+    opacity: 0.125;
+  }
+  60% {
     transform: scaleX(0.9);
-    opacity: 0.12;
+    opacity: 0.11;
   }
   100% {
     transform: scaleX(1);
@@ -293,47 +333,76 @@ body {
 }
 
 @keyframes eye-blink {
-  0% {
+  0%,
+  16%,
+  26%,
+  52%,
+  82%,
+  100% {
     transform: scaleY(1);
   }
-  4% {
+  18% {
     transform: scaleY(0.12);
   }
-  9% {
+  20% {
+    transform: scaleY(0.96);
+  }
+  22% {
+    transform: scaleY(0.18);
+  }
+  24% {
     transform: scaleY(1);
   }
-  100% {
+  54% {
+    transform: scaleY(0.18);
+  }
+  56% {
+    transform: scaleY(1);
+  }
+  84% {
+    transform: scaleY(0.16);
+  }
+  86% {
     transform: scaleY(1);
   }
 }
 
 @keyframes hop {
   0% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1, 1);
   }
-  25% {
-    transform: translateY(-11px);
+  18% {
+    transform: translate3d(0, 1px, 0) scale(1.04, 0.96);
   }
-  55% {
-    transform: translateY(1px);
+  42% {
+    transform: translate3d(0, -12px, 0) scale(0.97, 1.03);
+  }
+  64% {
+    transform: translate3d(0, 2px, 0) scale(1.02, 0.98);
   }
   100% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1, 1);
   }
 }
 
 @keyframes look-pan {
   0% {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  20% {
-    transform: translateX(-4px);
+  18% {
+    transform: translate3d(-4px, 0, 0) rotate(-1deg);
   }
-  50% {
-    transform: translateX(4px);
+  34% {
+    transform: translate3d(-1px, 0, 0) rotate(-0.2deg);
+  }
+  56% {
+    transform: translate3d(4px, 0, 0) rotate(0.9deg);
+  }
+  72% {
+    transform: translate3d(1px, 0, 0) rotate(0.2deg);
   }
   100% {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
 }
 
@@ -342,11 +411,11 @@ body {
   100% {
     transform: translateX(0);
   }
-  20% {
+  18% {
     transform: translateX(-2px);
   }
-  50% {
-    transform: translateX(1px);
+  56% {
+    transform: translateX(1.2px);
   }
 }
 
@@ -355,23 +424,26 @@ body {
   100% {
     transform: translateX(0);
   }
-  20% {
+  18% {
     transform: translateX(-1px);
   }
-  50% {
+  56% {
     transform: translateX(2px);
   }
 }
 
 @keyframes nap-breathe {
   0% {
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
-  50% {
-    transform: translateY(1px) scale(0.98);
+  42% {
+    transform: translate3d(0, 1.2px, 0) scale(0.985);
+  }
+  72% {
+    transform: translate3d(0, 0.4px, 0) scale(0.992);
   }
   100% {
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -379,11 +451,14 @@ body {
   0% {
     transform: rotate(0deg) translateY(0);
   }
-  30% {
-    transform: rotate(5deg) translateY(1px);
+  28% {
+    transform: rotate(4.8deg) translateY(0.8px);
   }
-  60% {
-    transform: rotate(3deg) translateY(2px);
+  54% {
+    transform: rotate(2.6deg) translateY(1.8px);
+  }
+  78% {
+    transform: rotate(4deg) translateY(0.9px);
   }
   100% {
     transform: rotate(0deg) translateY(0);
@@ -417,102 +492,105 @@ body {
 @keyframes zzz-float-a {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.5);
+    transform: translate(0, 0) scale(0.58);
   }
-  20% {
-    opacity: 0.7;
-    transform: translate(1px, -4px) scale(0.8);
+  22% {
+    opacity: 0.72;
+    transform: translate(1px, -4px) scale(0.82);
   }
-  80% {
-    opacity: 0.5;
-    transform: translate(3px, -10px) scale(1);
+  78% {
+    opacity: 0.46;
+    transform: translate(3px, -11px) scale(1.03);
   }
   100% {
     opacity: 0;
-    transform: translate(5px, -16px) scale(1.1);
+    transform: translate(5px, -17px) scale(1.14);
   }
 }
 
 @keyframes zzz-float-b {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.5);
+    transform: translate(0, 0) scale(0.54);
   }
-  20% {
-    opacity: 0.6;
-    transform: translate(2px, -5px) scale(0.85);
+  22% {
+    opacity: 0.58;
+    transform: translate(2px, -5px) scale(0.86);
   }
-  80% {
-    opacity: 0.4;
-    transform: translate(5px, -12px) scale(1.05);
+  76% {
+    opacity: 0.36;
+    transform: translate(5px, -13px) scale(1.06);
   }
   100% {
     opacity: 0;
-    transform: translate(7px, -18px) scale(1.15);
+    transform: translate(7px, -19px) scale(1.18);
   }
 }
 
 @keyframes zzz-float-c {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.6);
+    transform: translate(0, 0) scale(0.62);
   }
   20% {
-    opacity: 0.5;
-    transform: translate(2px, -6px) scale(0.9);
+    opacity: 0.48;
+    transform: translate(2px, -6px) scale(0.92);
   }
-  80% {
-    opacity: 0.35;
-    transform: translate(6px, -14px) scale(1.1);
+  78% {
+    opacity: 0.33;
+    transform: translate(6px, -15px) scale(1.12);
   }
   100% {
     opacity: 0;
-    transform: translate(8px, -20px) scale(1.2);
+    transform: translate(8px, -21px) scale(1.24);
   }
 }
 
 @keyframes snore-a {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.6);
+    transform: translate(0, 0) scale(0.65);
   }
-  40% {
-    opacity: 0.65;
-    transform: translate(2px, -7px) scale(0.9);
+  42% {
+    opacity: 0.62;
+    transform: translate(2px, -7px) scale(0.95);
   }
   100% {
     opacity: 0;
-    transform: translate(4px, -13px) scale(1.1);
+    transform: translate(4px, -14px) scale(1.14);
   }
 }
 
 @keyframes snore-b {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.5);
+    transform: translate(0, 0) scale(0.54);
   }
   65% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.5);
+    transform: translate(0, 0) scale(0.54);
   }
   100% {
-    opacity: 0.45;
-    transform: translate(2px, -6px) scale(0.85);
+    opacity: 0.44;
+    transform: translate(2px, -6px) scale(0.9);
   }
 }
 
 @keyframes recoil {
   0% {
-    transform: translateX(0) rotate(0deg);
+    transform: translateX(0) rotate(0deg) scale(1);
   }
-  30% {
-    transform: translateX(-8px) rotate(-4deg);
+  20% {
+    transform: translateX(-9px) rotate(-4.6deg) scale(1.01);
   }
-  65% {
-    transform: translateX(4px) rotate(2deg);
+  54% {
+    transform: translateX(4px) rotate(2.4deg) scale(0.997);
+  }
+  78% {
+    transform: translateX(-1px) rotate(-0.8deg) scale(1.003);
   }
   100% {
-    transform: translateX(0) rotate(0deg);
+    transform: translateX(0) rotate(0deg) scale(1);
   }
 }
 
@@ -536,16 +614,16 @@ body {
 
 @keyframes drag-wobble {
   0% {
-    transform: translateX(0);
+    transform: translateX(0) rotate(0deg);
   }
-  25% {
-    transform: translateX(-4px) rotate(-4deg);
+  22% {
+    transform: translateX(-5px) rotate(-4.6deg);
   }
-  50% {
-    transform: translateX(4px) rotate(4deg);
+  48% {
+    transform: translateX(5px) rotate(4.4deg);
   }
-  75% {
-    transform: translateX(-2px) rotate(-2deg);
+  72% {
+    transform: translateX(-2px) rotate(-2.2deg);
   }
   100% {
     transform: translateX(0) rotate(0deg);
@@ -556,15 +634,21 @@ body {
   0% {
     transform: scale(1);
   }
-  40% {
-    transform: scale(1.07);
+  22% {
+    transform: scale(0.94);
+  }
+  52% {
+    transform: scale(1.085);
+  }
+  76% {
+    transform: scale(0.99);
   }
   100% {
     transform: scale(1);
   }
 }
 
-/* ─── Cat avatar overrides ─── */
+/* Cat avatar overrides */
 
 .tokki-asset--cat .tokki-ear-shell,
 .tokki-asset--cat .tokki-head {
@@ -574,23 +658,26 @@ body {
 }
 
 .tokki-asset--cat .tokki-nose {
-  transition: fill 0.3s ease;
+  transition: fill var(--motion-base) var(--ease-standard);
 }
 
 .tokki-asset--cat .tokki-whisker line {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--motion-base) var(--ease-standard);
 }
 
-.tokki-avatar:hover .tokki-asset--cat .tokki-whisker line {
-  opacity: 0.65;
+@media (hover: hover) and (pointer: fine) {
+  .tokki-avatar:hover .tokki-asset--cat .tokki-whisker line {
+    opacity: 0.72;
+  }
 }
 
 .tokki-asset--cat .tokki-tail {
   transform-origin: 110px 110px;
-  animation: cat-tail-sway 2.8s ease-in-out infinite;
+  will-change: transform;
+  animation: cat-tail-sway 3.2s var(--ease-standard) infinite;
 }
 
-/* ─── Fox avatar overrides ─── */
+/* Fox avatar overrides */
 
 .tokki-asset--fox .tokki-ear-shell,
 .tokki-asset--fox .tokki-head {
@@ -600,27 +687,28 @@ body {
 }
 
 .tokki-asset--fox .tokki-face-mask {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--motion-base) var(--ease-standard);
 }
 
 .tokki-asset--fox .tokki-tail {
   transform-origin: 108px 112px;
-  animation: fox-tail-wag 2.2s ease-in-out infinite;
+  will-change: transform;
+  animation: fox-tail-wag 2.6s var(--ease-standard) infinite;
 }
 
 .tokki-asset--fox .tokki-tail-tip {
-  animation: tail-tip-glow 2.2s ease-in-out infinite;
+  animation: tail-tip-glow 2.6s var(--ease-standard) infinite;
 }
 
 @keyframes cat-tail-sway {
   0% {
     transform: rotate(0deg);
   }
-  30% {
+  24% {
     transform: rotate(8deg);
   }
-  70% {
-    transform: rotate(-6deg);
+  58% {
+    transform: rotate(-5deg);
   }
   100% {
     transform: rotate(0deg);
@@ -631,14 +719,14 @@ body {
   0% {
     transform: rotate(0deg);
   }
-  25% {
-    transform: rotate(10deg);
+  20% {
+    transform: rotate(11deg);
   }
-  50% {
-    transform: rotate(0deg);
+  48% {
+    transform: rotate(-3deg);
   }
-  75% {
-    transform: rotate(-8deg);
+  72% {
+    transform: rotate(-9deg);
   }
   100% {
     transform: rotate(0deg);
@@ -647,24 +735,34 @@ body {
 
 @keyframes tail-tip-glow {
   0% {
-    opacity: 0.85;
+    opacity: 0.84;
+    filter: brightness(1);
   }
   50% {
     opacity: 1;
-    filter: brightness(1.08);
+    filter: brightness(1.1);
   }
   100% {
-    opacity: 0.85;
+    opacity: 0.84;
+    filter: brightness(1);
   }
 }
 
-/* ─── Chat Bubble ─── */
+/* Chat bubble */
 
 .tokki-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
+}
+
+.tokki-stage {
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.tokki-card--chat-open .tokki-stage {
+  transform: translateY(-1px);
 }
 
 .chat-bubble {
@@ -682,16 +780,17 @@ body {
     0 2px 12px rgba(80, 50, 20, 0.08),
     0 0 0 1px rgba(255, 240, 220, 0.3) inset;
   opacity: 0;
-  transform: translateY(6px) scale(0.96);
+  transform: translateY(6px) scale(0.965);
+  will-change: transform, opacity;
   animation: none;
 }
 
 .chat-bubble--enter {
-  animation: bubble-enter 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: bubble-enter 420ms var(--ease-spring) forwards;
 }
 
 .chat-bubble--exit {
-  animation: bubble-exit 0.4s ease-out forwards;
+  animation: bubble-exit 280ms var(--ease-out) forwards;
 }
 
 .chat-bubble__tail {
@@ -735,21 +834,25 @@ body {
   border-radius: 50%;
   background: #c4a882;
   opacity: 0.4;
-  animation: typing-bounce 1.4s ease-in-out infinite;
+  animation: typing-bounce 1.1s var(--ease-standard) infinite;
 }
 
 .chat-bubble__dot:nth-child(2) {
-  animation-delay: 0.15s;
+  animation-delay: 120ms;
 }
 
 .chat-bubble__dot:nth-child(3) {
-  animation-delay: 0.3s;
+  animation-delay: 240ms;
 }
 
 @keyframes bubble-enter {
   0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.96);
+    transform: translateY(7px) scale(0.965);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.01);
   }
   100% {
     opacity: 1;
@@ -764,30 +867,40 @@ body {
   }
   100% {
     opacity: 0;
-    transform: translateY(-4px) scale(0.97);
+    transform: translateY(-4px) scale(0.975);
   }
 }
 
 @keyframes typing-bounce {
   0%,
-  60%,
+  65%,
   100% {
     opacity: 0.3;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
-  30% {
-    opacity: 0.8;
-    transform: translateY(-4px);
+  35% {
+    opacity: 0.84;
+    transform: translateY(-4px) scale(1.08);
   }
 }
 
-/* ─── Chat Input ─── */
+/* Chat input */
 
 .tokki-chat-panel {
   width: 100%;
   max-width: 280px;
   margin-top: 6px;
-  animation: panel-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center top;
+  will-change: transform, opacity;
+}
+
+.tokki-chat-panel--open {
+  animation: panel-slide-in 320ms var(--ease-spring) forwards;
+}
+
+.tokki-chat-panel--closing {
+  pointer-events: none;
+  animation: panel-slide-out 220ms var(--ease-out) forwards;
 }
 
 .avatar-picker {
@@ -808,12 +921,21 @@ body {
   padding: 0;
   display: grid;
   place-items: center;
-  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
 }
 
-.avatar-picker__btn:hover {
-  transform: scale(1.15);
-  border-color: rgba(180, 140, 100, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .avatar-picker__btn:hover {
+    transform: scale(1.12);
+    border-color: rgba(180, 140, 100, 0.45);
+  }
+}
+
+.avatar-picker__btn:active {
+  transform: scale(0.96);
 }
 
 .avatar-picker__btn--active {
@@ -838,7 +960,10 @@ body {
   border-radius: 20px;
   padding: 4px 4px 4px 14px;
   box-shadow: 0 1px 8px rgba(80, 50, 20, 0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-out);
 }
 
 .chat-input:focus-within {
@@ -846,6 +971,7 @@ body {
   box-shadow:
     0 1px 8px rgba(80, 50, 20, 0.06),
     0 0 0 3px rgba(210, 180, 140, 0.15);
+  transform: translateY(-1px);
 }
 
 .chat-input__field {
@@ -878,16 +1004,22 @@ body {
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-out),
+    filter var(--motion-fast) var(--ease-standard);
 }
 
-.chat-input__send:hover:not(:disabled) {
-  background: #dcc5a8;
-  transform: scale(1.06);
+@media (hover: hover) and (pointer: fine) {
+  .chat-input__send:hover:not(:disabled) {
+    background: #dcc5a8;
+    transform: scale(1.06);
+    filter: saturate(1.04);
+  }
 }
 
 .chat-input__send:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
 .chat-input__send:disabled {
@@ -898,11 +1030,50 @@ body {
 @keyframes panel-slide-in {
   0% {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(9px) scale(0.97);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes panel-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tokki-avatar,
+  .tokki-avatar .tokki-asset,
+  .tokki-avatar .tokki-shadow,
+  .tokki-avatar .tokki-eye,
+  .tokki-avatar .tokki-ear,
+  .tokki-avatar .tokki-head,
+  .tokki-avatar .tokki-tail,
+  .tokki-avatar .tokki-tail-tip,
+  .tokki-avatar .tokki-snore,
+  .tokki-avatar .tokki-zzz,
+  .chat-bubble,
+  .chat-bubble__dot,
+  .tokki-chat-panel,
+  .avatar-picker__btn,
+  .chat-input,
+  .chat-input__send {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .chat-bubble,
+  .tokki-chat-panel {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -985,3 +1156,4 @@ body {
     height: 20px;
   }
 }
+

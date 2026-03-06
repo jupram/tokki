@@ -1,9 +1,10 @@
 use std::{
-    sync::mpsc,
+    net::IpAddr,
+    sync::{mpsc, OnceLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use reqwest::{blocking::Client, Url};
+use reqwest::{Client, Url};
 use serde::Deserialize;
 use serde_json::Value;
 use tauri::{AppHandle, State};
@@ -14,22 +15,30 @@ use crate::{
     runtime::SharedRuntime,
 };
 
-fn now_millis() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis() as u64,
-        Err(_) => 0,
-    }
-}
-
 const LLM_NOT_CONFIGURED: &str = "llm not configured";
 const INVALID_LLM_ENDPOINT: &str =
     "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
+const INSECURE_LLM_ENDPOINT: &str =
+    "llm endpoint must use https (http is only allowed for localhost)";
+const MAX_LLM_ENDPOINT_LEN: usize = 2_048;
+const MAX_LLM_MODEL_LEN: usize = 128;
+const MAX_LLM_PROMPT_LEN: usize = 16_384;
+const MAX_LLM_RESPONSE_LEN_BYTES: u64 = 1_048_576;
+const LLM_CLIENT_TIMEOUT_SECS: u64 = 30;
+const DEFAULT_LLM_MODEL: &str = "gpt-4o-mini";
 
 #[derive(Debug, Deserialize)]
 pub struct LlmInteractionRequest {
     pub prompt: String,
     pub endpoint: Option<String>,
     pub model: Option<String>,
+}
+
+fn now_millis() -> u64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis() as u64,
+        Err(_) => 0,
+    }
 }
 
 fn sanitize_non_empty(value: Option<&str>) -> Option<String> {
@@ -47,18 +56,34 @@ fn resolve_llm_endpoint(override_endpoint: Option<&str>) -> Option<String> {
     sanitize_non_empty(override_endpoint).or_else(|| env_non_empty("TOKKI_LLM_ENDPOINT"))
 }
 
-fn resolve_llm_model(override_model: Option<&str>) -> String {
-    sanitize_non_empty(override_model)
+fn resolve_llm_model(override_model: Option<&str>) -> Result<String, String> {
+    let model = sanitize_non_empty(override_model)
         .or_else(|| env_non_empty("TOKKI_LLM_MODEL"))
-        .unwrap_or_else(|| String::from("gpt-4o-mini"))
+        .unwrap_or_else(|| String::from(DEFAULT_LLM_MODEL));
+
+    if model.len() > MAX_LLM_MODEL_LEN {
+        return Err(format!(
+            "llm model name too long (max {MAX_LLM_MODEL_LEN} bytes)"
+        ));
+    }
+
+    Ok(model)
 }
 
-fn is_standard_llm_endpoint(endpoint: &str) -> bool {
-    let url = match Url::parse(endpoint) {
-        Ok(url) => url,
-        Err(_) => return false,
-    };
+fn validate_prompt(prompt: &str) -> Result<String, String> {
+    let trimmed = prompt.trim();
+    if trimmed.is_empty() {
+        return Err(String::from("prompt must not be empty"));
+    }
 
+    if trimmed.len() > MAX_LLM_PROMPT_LEN {
+        return Err(format!("prompt too long (max {MAX_LLM_PROMPT_LEN} bytes)"));
+    }
+
+    Ok(String::from(trimmed))
+}
+
+fn is_standard_llm_endpoint(url: &Url) -> bool {
     let path = url.path().trim_end_matches('/').to_ascii_lowercase();
     if path.ends_with("/v1/responses") || path.ends_with("/v1/chat/completions") {
         return true;
@@ -66,6 +91,67 @@ fn is_standard_llm_endpoint(endpoint: &str) -> bool {
 
     path.contains("/openai/deployments/")
         && (path.ends_with("/chat/completions") || path.ends_with("/responses"))
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+
+    host.parse::<IpAddr>()
+        .map(|ip| ip.is_loopback())
+        .unwrap_or(false)
+}
+
+fn validate_llm_endpoint(endpoint: &str) -> Result<Url, String> {
+    if endpoint.len() > MAX_LLM_ENDPOINT_LEN {
+        return Err(format!(
+            "llm endpoint too long (max {MAX_LLM_ENDPOINT_LEN} bytes)"
+        ));
+    }
+
+    let url = Url::parse(endpoint).map_err(|_| String::from(INVALID_LLM_ENDPOINT))?;
+    if url.host_str().is_none() {
+        return Err(String::from(INVALID_LLM_ENDPOINT));
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(String::from("llm endpoint must not include credentials"));
+    }
+
+    let secure_scheme = match url.scheme() {
+        "https" => true,
+        "http" => url.host_str().map(is_loopback_host).unwrap_or(false),
+        _ => false,
+    };
+    if !secure_scheme {
+        return Err(String::from(INSECURE_LLM_ENDPOINT));
+    }
+    if !is_standard_llm_endpoint(&url) {
+        return Err(String::from(INVALID_LLM_ENDPOINT));
+    }
+
+    Ok(url)
+}
+
+fn is_responses_api_endpoint(endpoint: &Url) -> bool {
+    endpoint
+        .path()
+        .trim_end_matches('/')
+        .to_ascii_lowercase()
+        .ends_with("/responses")
+}
+
+fn llm_client() -> Result<&'static Client, String> {
+    static CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
+    CLIENT
+        .get_or_init(|| {
+            Client::builder()
+                .timeout(Duration::from_secs(LLM_CLIENT_TIMEOUT_SECS))
+                .build()
+                .map_err(|error| format!("failed to create llm client: {error}"))
+        })
+        .as_ref()
+        .map_err(|error| error.clone())
 }
 
 fn extract_llm_text(payload: &Value) -> Option<String> {
@@ -102,19 +188,13 @@ fn extract_llm_text(payload: &Value) -> Option<String> {
         .map(String::from)
 }
 
-fn call_llm_endpoint(
-    endpoint: &str,
+async fn call_llm_endpoint(
+    endpoint: &Url,
     prompt: &str,
     model: &str,
     api_key: Option<&str>,
 ) -> Result<String, String> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(30))
-        .build()
-        .map_err(|error| format!("failed to create llm client: {error}"))?;
-
-    let is_responses_api = endpoint.trim_end_matches('/').ends_with("/responses");
-    let request_body = if is_responses_api {
+    let request_body = if is_responses_api_endpoint(endpoint) {
         serde_json::json!({
             "model": model,
             "input": prompt
@@ -131,17 +211,26 @@ fn call_llm_endpoint(
         })
     };
 
-    let mut request = client.post(endpoint).json(&request_body);
+    let mut request = llm_client()?.post(endpoint.clone()).json(&request_body);
     if let Some(secret) = api_key {
         request = request.bearer_auth(secret);
     }
 
     let response = request
         .send()
+        .await
         .map_err(|error| format!("llm request failed: {error}"))?;
+
+    if response.content_length().unwrap_or(0) > MAX_LLM_RESPONSE_LEN_BYTES {
+        return Err(format!(
+            "llm response exceeded size limit ({MAX_LLM_RESPONSE_LEN_BYTES} bytes)"
+        ));
+    }
+
     let status = response.status();
     let payload = response
         .json::<Value>()
+        .await
         .map_err(|error| format!("failed to parse llm response: {error}"))?;
 
     if !status.is_success() {
@@ -184,7 +273,10 @@ fn timer_tick(runtime: &SharedRuntime) -> Result<BehaviorTickPayload, String> {
     Ok(guard.engine.tick(TransitionReason::Timer, None))
 }
 
-fn apply_user_event(runtime: &SharedRuntime, event: UserEvent) -> Result<BehaviorTickPayload, String> {
+fn apply_user_event(
+    runtime: &SharedRuntime,
+    event: UserEvent,
+) -> Result<BehaviorTickPayload, String> {
     let mut guard = runtime
         .0
         .lock()
@@ -214,7 +306,6 @@ pub fn start_behavior_loop(
         }
 
         if let Some(custom_seed) = seed {
-            guard.seed = custom_seed;
             guard.engine.reseed(custom_seed);
         }
 
@@ -296,18 +387,16 @@ pub fn advance_tick(
 }
 
 #[tauri::command]
-pub fn request_llm_reply(request: LlmInteractionRequest) -> Result<String, String> {
+pub async fn request_llm_reply(request: LlmInteractionRequest) -> Result<String, String> {
     let endpoint = match resolve_llm_endpoint(request.endpoint.as_deref()) {
         Some(endpoint) => endpoint,
         None => return Ok(String::from(LLM_NOT_CONFIGURED)),
     };
-    if !is_standard_llm_endpoint(&endpoint) {
-        return Err(String::from(INVALID_LLM_ENDPOINT));
-    }
-
-    let model = resolve_llm_model(request.model.as_deref());
+    let endpoint = validate_llm_endpoint(&endpoint)?;
+    let prompt = validate_prompt(&request.prompt)?;
+    let model = resolve_llm_model(request.model.as_deref())?;
     let api_key = env_non_empty("TOKKI_LLM_API_KEY");
-    call_llm_endpoint(&endpoint, &request.prompt, &model, api_key.as_deref())
+    call_llm_endpoint(&endpoint, &prompt, &model, api_key.as_deref()).await
 }
 
 #[cfg(test)]
@@ -319,6 +408,7 @@ mod tests {
     };
     use std::{
         env,
+        future::Future,
         sync::{mpsc::channel, Arc, Mutex, Mutex as StdMutex},
     };
 
@@ -326,6 +416,10 @@ mod tests {
 
     fn test_runtime(seed: u64) -> SharedRuntime {
         SharedRuntime(Arc::new(Mutex::new(RuntimeState::with_seed(seed))))
+    }
+
+    fn run_async<T>(future: impl Future<Output = T>) -> T {
+        tauri::async_runtime::block_on(future)
     }
 
     #[test]
@@ -421,11 +515,11 @@ mod tests {
         let existing_endpoint = env::var("TOKKI_LLM_ENDPOINT").ok();
         env::remove_var("TOKKI_LLM_ENDPOINT");
 
-        let response = request_llm_reply(LlmInteractionRequest {
+        let response = run_async(request_llm_reply(LlmInteractionRequest {
             prompt: String::from("hello"),
             endpoint: None,
             model: None,
-        })
+        }))
         .expect("request should not fail");
 
         if let Some(value) = existing_endpoint {
@@ -433,6 +527,32 @@ mod tests {
         }
 
         assert_eq!(response, LLM_NOT_CONFIGURED);
+    }
+
+    #[test]
+    fn request_llm_reply_rejects_non_standard_endpoint() {
+        let response = run_async(request_llm_reply(LlmInteractionRequest {
+            prompt: String::from("hello"),
+            endpoint: Some(String::from(
+                "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
+            )),
+            model: None,
+        }));
+
+        let error = response.expect_err("non-standard endpoint should fail");
+        assert_eq!(error, INVALID_LLM_ENDPOINT);
+    }
+
+    #[test]
+    fn request_llm_reply_rejects_empty_prompt() {
+        let response = run_async(request_llm_reply(LlmInteractionRequest {
+            prompt: String::from("   "),
+            endpoint: Some(String::from("https://api.openai.com/v1/responses")),
+            model: None,
+        }));
+
+        let error = response.expect_err("empty prompt should fail");
+        assert_eq!(error, "prompt must not be empty");
     }
 
     #[test]
@@ -453,28 +573,24 @@ mod tests {
 
     #[test]
     fn standard_endpoint_validation_accepts_openai_and_azure_shapes() {
-        assert!(is_standard_llm_endpoint(
-            "https://api.openai.com/v1/responses"
-        ));
-        assert!(is_standard_llm_endpoint(
-            "https://api.openai.com/v1/chat/completions"
-        ));
-        assert!(is_standard_llm_endpoint(
+        assert!(validate_llm_endpoint("https://api.openai.com/v1/responses").is_ok());
+        assert!(validate_llm_endpoint("https://api.openai.com/v1/chat/completions").is_ok());
+        assert!(validate_llm_endpoint(
             "https://example.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2024-10-21"
-        ));
+        )
+        .is_ok());
     }
 
     #[test]
-    fn request_llm_reply_rejects_non_standard_endpoint() {
-        let response = request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("hello"),
-            endpoint: Some(String::from(
-                "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
-            )),
-            model: None,
-        });
+    fn standard_endpoint_validation_rejects_remote_http() {
+        let endpoint =
+            validate_llm_endpoint("http://api.openai.com/v1/chat/completions").expect_err("http");
+        assert_eq!(endpoint, INSECURE_LLM_ENDPOINT);
+    }
 
-        let error = response.expect_err("non-standard endpoint should fail");
-        assert_eq!(error, INVALID_LLM_ENDPOINT);
+    #[test]
+    fn standard_endpoint_validation_allows_localhost_http() {
+        assert!(validate_llm_endpoint("http://localhost:11434/v1/chat/completions").is_ok());
+        assert!(validate_llm_endpoint("http://127.0.0.1:11434/v1/chat/completions").is_ok());
     }
 }

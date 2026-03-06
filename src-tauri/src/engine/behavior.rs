@@ -1,7 +1,8 @@
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use super::models::{
-    BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent, UserEventType,
+    BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent,
+    UserEventType,
 };
 
 #[derive(Debug)]
@@ -198,7 +199,7 @@ mod tests {
 
         assert_eq!(tick.state.current_action.id, "react_poke");
         assert_eq!(tick.reason, TransitionReason::Interaction);
-        assert_eq!(tick.state.current_action.interruptible, false);
+        assert!(!tick.state.current_action.interruptible);
     }
 
     #[test]
