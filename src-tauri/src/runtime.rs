@@ -9,7 +9,6 @@ pub struct RuntimeState {
     pub engine: BehaviorEngine,
     pub running: bool,
     pub stop_tx: Option<Sender<()>>,
-    pub seed: u64,
     pub loop_generation: u64,
 }
 
@@ -19,7 +18,6 @@ impl RuntimeState {
             engine: BehaviorEngine::new(seed),
             running: false,
             stop_tx: None,
-            seed,
             loop_generation: 0,
         }
     }
