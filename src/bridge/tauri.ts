@@ -32,6 +32,11 @@ let fallbackLoop: ReturnType<typeof setInterval> | null = null;
 let fallbackState: TokkiState = createInitialTokkiState();
 let fallbackSeed = 1337;
 let fallbackChatHistory: ChatMessage[] = [];
+// Limit the number of messages kept in in-memory fallback chat history.
+// 200 is a conservative upper bound chosen to prevent unbounded growth
+// while still supporting reasonably long sessions; adjust if usage or
+// memory constraints change.
+const MAX_FALLBACK_CHAT_HISTORY = 200;
 
 const COLLAPSED_WINDOW_SIZE = { width: 180, height: 180 };
 const EXPANDED_WINDOW_SIZE = { width: 320, height: 290 };
@@ -229,9 +234,16 @@ function toLlmResponse(line: string): LlmResponse {
   return { line: trimmed, mood: "idle", animation: "idle.blink", intent: "chat" };
 }
 
+function appendFallbackHistory(message: ChatMessage): void {
+  fallbackChatHistory.push(message);
+  if (fallbackChatHistory.length > MAX_FALLBACK_CHAT_HISTORY) {
+    fallbackChatHistory.splice(0, fallbackChatHistory.length - MAX_FALLBACK_CHAT_HISTORY);
+  }
+}
+
 async function sendFallbackChatMessage(message: string): Promise<ChatResponse> {
   const now = Date.now();
-  fallbackChatHistory.push({
+  appendFallbackHistory({
     role: "user",
     content: message,
     timestamp: now
@@ -240,7 +252,7 @@ async function sendFallbackChatMessage(message: string): Promise<ChatResponse> {
   await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
 
   const reply = fallbackChatReply(message);
-  fallbackChatHistory.push({
+  appendFallbackHistory({
     role: "assistant",
     content: reply.line,
     timestamp: Date.now()
@@ -372,18 +384,18 @@ export async function sendChatMessage(message: string): Promise<ChatResponse> {
 
   const now = Date.now();
   const reply = toLlmResponse(llmText);
-  fallbackChatHistory.push({ role: "user", content: message, timestamp: now });
-  fallbackChatHistory.push({
+  appendFallbackHistory({ role: "user", content: message, timestamp: now });
+  appendFallbackHistory({
     role: "assistant",
     content: reply.line,
     timestamp: Date.now()
   });
-  const tick = emitFallback("manual");
-  return { reply, tick };
+export async function getChatHistory(): Promise<readonly ChatMessage[]> {
+  return fallbackChatHistory;
 }
 
 export async function getChatHistory(): Promise<ChatMessage[]> {
-  return fallbackChatHistory;
+  return [...fallbackChatHistory];
 }
 
 export async function setAvatar(avatarId: AvatarId): Promise<void> {
