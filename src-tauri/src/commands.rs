@@ -221,16 +221,35 @@ async fn call_llm_endpoint(
         .await
         .map_err(|error| format!("llm request failed: {error}"))?;
 
-    if response.content_length().unwrap_or(0) > MAX_LLM_RESPONSE_LEN_BYTES {
+    if response
+        .content_length()
+        .is_some_and(|len| len > MAX_LLM_RESPONSE_LEN_BYTES)
+    {
         return Err(format!(
             "llm response exceeded size limit ({MAX_LLM_RESPONSE_LEN_BYTES} bytes)"
         ));
     }
 
     let status = response.status();
-    let payload = response
-        .json::<Value>()
+    let mut response = response;
+    let mut body = Vec::new();
+    let mut total_size: u64 = 0;
+    while let Some(chunk) = response
+        .chunk()
         .await
+        .map_err(|error| format!("failed to read llm response: {error}"))?
+    {
+        let chunk_len = chunk.len() as u64;
+        if total_size + chunk_len > MAX_LLM_RESPONSE_LEN_BYTES {
+            return Err(format!(
+                "llm response exceeded size limit ({MAX_LLM_RESPONSE_LEN_BYTES} bytes)"
+            ));
+        }
+        total_size += chunk_len;
+        body.extend_from_slice(&chunk);
+    }
+
+    let payload = serde_json::from_slice::<Value>(&body)
         .map_err(|error| format!("failed to parse llm response: {error}"))?;
 
     if !status.is_success() {
