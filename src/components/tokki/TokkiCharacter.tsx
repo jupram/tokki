@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { mapActionToView } from "../../animation/mapActionToView";
 import {
   getCurrentState,
@@ -11,10 +12,11 @@ import {
   subscribeBehaviorTick
 } from "../../bridge/tauri";
 import { useTokkiStore } from "../../state/useTokkiStore";
-import type { UserEvent } from "../../types/tokki";
-import { ChatBubble } from "./ChatBubble";
-import { ChatInput } from "./ChatInput";
+import type { LlmResponse, UserEvent } from "../../types/tokki";
 import { AvatarPicker } from "./AvatarPicker";
+import { ChatBubble } from "./ChatBubble";
+import { ChatHistory } from "./ChatHistory";
+import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
 
 function makeUserEvent(type: UserEvent["type"]): UserEvent {
@@ -28,20 +30,38 @@ const DRAG_THRESHOLD = 4;
 const CHAT_PANEL_EXIT_MS = 220;
 
 export function TokkiCharacter(): JSX.Element {
-  const state = useTokkiStore((store) => store.state);
-  const connected = useTokkiStore((store) => store.connected);
-  const avatarId = useTokkiStore((store) => store.avatarId);
-  const currentReply = useTokkiStore((store) => store.currentReply);
-  const isTyping = useTokkiStore((store) => store.isTyping);
-  const chatOpen = useTokkiStore((store) => store.chatOpen);
+  const { state, connected, avatarId, currentReply, isTyping, chatMessages, chatOpen } =
+    useTokkiStore(
+      useShallow((store) => ({
+        state: store.state,
+        connected: store.connected,
+        avatarId: store.avatarId,
+        currentReply: store.currentReply,
+        isTyping: store.isTyping,
+        chatMessages: store.chatMessages,
+        chatOpen: store.chatOpen
+      }))
+    );
 
-  const applyTick = useTokkiStore((store) => store.applyTick);
-  const setState = useTokkiStore((store) => store.setState);
-  const setConnected = useTokkiStore((store) => store.setConnected);
-  const setCurrentReply = useTokkiStore((store) => store.setCurrentReply);
-  const setIsTyping = useTokkiStore((store) => store.setIsTyping);
-  const setChatOpen = useTokkiStore((store) => store.setChatOpen);
-  const addChatMessage = useTokkiStore((store) => store.addChatMessage);
+  const {
+    applyTick,
+    setState,
+    setConnected,
+    setCurrentReply,
+    setIsTyping,
+    setChatOpen,
+    addChatMessage
+  } = useTokkiStore(
+    useShallow((store) => ({
+      applyTick: store.applyTick,
+      setState: store.setState,
+      setConnected: store.setConnected,
+      setCurrentReply: store.setCurrentReply,
+      setIsTyping: store.setIsTyping,
+      setChatOpen: store.setChatOpen,
+      addChatMessage: store.addChatMessage
+    }))
+  );
 
   const dragRef = useRef<{ startX: number; startY: number; dragging: boolean } | null>(null);
   const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,17 +131,20 @@ export function TokkiCharacter(): JSX.Element {
     []
   );
 
-  const onInteract = async (type: UserEvent["type"]): Promise<void> => {
-    const tick = await handleUserInteraction(makeUserEvent(type));
-    applyTick(tick);
-  };
+  const onInteract = useCallback(
+    async (type: UserEvent["type"]): Promise<void> => {
+      const tick = await handleUserInteraction(makeUserEvent(type));
+      applyTick(tick);
+    },
+    [applyTick]
+  );
 
-  const onAvatarMouseDown = (event: MouseEvent<HTMLButtonElement>): void => {
+  const onAvatarMouseDown = useCallback((event: MouseEvent<HTMLButtonElement>): void => {
     if (event.button !== 0) {
       return;
     }
     dragRef.current = { startX: event.screenX, startY: event.screenY, dragging: false };
-  };
+  }, []);
 
   useEffect(() => {
     const onMouseMove = (event: globalThis.MouseEvent): void => {
@@ -148,13 +171,13 @@ export function TokkiCharacter(): JSX.Element {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, []);
+  }, [onInteract]);
 
-  const onAvatarClick = (): void => {
+  const onAvatarClick = useCallback((): void => {
     if (dragRef.current?.dragging) return;
     setChatOpen(!chatOpen);
     void onInteract("click");
-  };
+  }, [chatOpen, onInteract, setChatOpen]);
 
   const onSendMessage = useCallback(
     async (message: string): Promise<void> => {
@@ -172,20 +195,29 @@ export function TokkiCharacter(): JSX.Element {
         });
       } catch (error) {
         console.error("Chat failed", error);
-        setCurrentReply({
+        const fallbackReply: LlmResponse = {
           line: "Oops, my brain fizzled... try again?",
           mood: "sleepy",
           animation: "idle.blink",
           intent: "none"
+        };
+        setCurrentReply(fallbackReply);
+        addChatMessage({
+          role: "assistant",
+          content: fallbackReply.line,
+          timestamp: Date.now()
         });
       } finally {
         setIsTyping(false);
       }
     },
-    [applyTick, setCurrentReply, setIsTyping, addChatMessage]
+    [addChatMessage, applyTick, setCurrentReply, setIsTyping]
   );
 
-  const actionView = mapActionToView(state.current_action, avatarId);
+  const actionView = useMemo(
+    () => mapActionToView(state.current_action, avatarId),
+    [avatarId, state.current_action]
+  );
 
   return (
     <section
@@ -216,7 +248,10 @@ export function TokkiCharacter(): JSX.Element {
       </div>
 
       {chatPanelVisible && (
-        <div className={`tokki-chat-panel ${chatPanelClosing ? "tokki-chat-panel--closing" : "tokki-chat-panel--open"}`}>
+        <div
+          className={`tokki-chat-panel ${chatPanelClosing ? "tokki-chat-panel--closing" : "tokki-chat-panel--open"}`}
+        >
+          <ChatHistory messages={chatMessages} isTyping={isTyping} />
           <AvatarPicker />
           <ChatInput
             onSend={(msg) => {

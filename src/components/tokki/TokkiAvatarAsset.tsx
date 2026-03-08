@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { TokkiAssetId } from "../../animation/mapActionToView";
 
 interface TokkiAvatarAssetProps {
@@ -404,7 +405,9 @@ function FoxAsset(): JSX.Element {
   );
 }
 
-export function TokkiAvatarAsset({ assetId }: TokkiAvatarAssetProps): JSX.Element {
+export const TokkiAvatarAsset = memo(function TokkiAvatarAsset({
+  assetId
+}: TokkiAvatarAssetProps): JSX.Element {
   switch (assetId) {
     case "cat_v1":
       return <CatAsset />;
@@ -414,4 +417,4 @@ export function TokkiAvatarAsset({ assetId }: TokkiAvatarAssetProps): JSX.Elemen
     default:
       return <RabbitAsset />;
   }
-}
+});
