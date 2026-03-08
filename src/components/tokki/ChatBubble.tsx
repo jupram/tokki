@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { LlmResponse } from "../../types/tokki";
 
 interface ChatBubbleProps {
@@ -6,7 +6,10 @@ interface ChatBubbleProps {
   isTyping: boolean;
 }
 
-export function ChatBubble({ reply, isTyping }: ChatBubbleProps): JSX.Element | null {
+export const ChatBubble = memo(function ChatBubble({
+  reply,
+  isTyping
+}: ChatBubbleProps): JSX.Element | null {
   const [visible, setVisible] = useState(false);
   const [fadeClass, setFadeClass] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,9 +53,7 @@ export function ChatBubble({ reply, isTyping }: ChatBubbleProps): JSX.Element | 
     return null;
   }
 
-  const moodEmoji = reply
-    ? getMoodEmoji(reply.mood)
-    : "";
+  const moodEmoji = reply ? getMoodEmoji(reply.mood) : "";
 
   return (
     <div className={`chat-bubble ${fadeClass}`} aria-live="polite">
@@ -71,7 +72,7 @@ export function ChatBubble({ reply, isTyping }: ChatBubbleProps): JSX.Element | 
       <div className="chat-bubble__tail" />
     </div>
   );
-}
+});
 
 function getMoodEmoji(mood: string): string {
   switch (mood) {

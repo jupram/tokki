@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { setAvatar } from "../../bridge/tauri";
 import { useTokkiStore } from "../../state/useTokkiStore";
 import type { AvatarId } from "../../types/tokki";
@@ -5,10 +6,10 @@ import type { AvatarId } from "../../types/tokki";
 const AVATARS: { id: AvatarId; label: string; emoji: string }[] = [
   { id: "rabbit_v1", label: "Rabbit", emoji: "🐰" },
   { id: "cat_v1", label: "Cat", emoji: "🐱" },
-  { id: "fox_v1", label: "Fox", emoji: "🦊" },
+  { id: "fox_v1", label: "Fox", emoji: "🦊" }
 ];
 
-export function AvatarPicker(): JSX.Element {
+export const AvatarPicker = memo(function AvatarPicker(): JSX.Element {
   const avatarId = useTokkiStore((s) => s.avatarId);
   const setAvatarId = useTokkiStore((s) => s.setAvatarId);
 
@@ -35,4 +36,4 @@ export function AvatarPicker(): JSX.Element {
       ))}
     </div>
   );
-}
+});

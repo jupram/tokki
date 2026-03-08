@@ -1,11 +1,14 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { memo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps): JSX.Element {
+export const ChatInput = memo(function ChatInput({
+  onSend,
+  disabled
+}: ChatInputProps): JSX.Element {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +48,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps): JSX.Element {
         aria-label="Chat with Tokki"
         autoComplete="off"
         spellCheck={false}
+        autoFocus
       />
       <button
         type="submit"
@@ -65,4 +69,4 @@ export function ChatInput({ onSend, disabled }: ChatInputProps): JSX.Element {
       </button>
     </form>
   );
-}
+});
