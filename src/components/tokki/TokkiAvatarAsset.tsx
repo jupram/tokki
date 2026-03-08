@@ -30,6 +30,10 @@ function RabbitAsset(): JSX.Element {
           <stop offset="0%" stopColor="#fff0e0" />
           <stop offset="100%" stopColor="#ffd8b5" />
         </radialGradient>
+        <radialGradient id="rb-belly" cx="50%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fffdf9" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#ffe9d2" stopOpacity="0.2" />
+        </radialGradient>
         <filter id="rb-soft-shadow" x="-20%" y="-10%" width="140%" height="130%">
           <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
           <feOffset dy="2" />
@@ -47,7 +51,8 @@ function RabbitAsset(): JSX.Element {
       <ellipse className="tokki-shadow" cx="80" cy="138" rx="34" ry="7" />
 
       {/* Body / torso blob */}
-      <ellipse className="tokki-body" cx="80" cy="108" rx="28" ry="22" fill="url(#rb-body)" stroke="rgba(58,30,18,0.16)" strokeWidth="1.5" />
+      <ellipse className="tokki-body" cx="80" cy="109" rx="26" ry="21" fill="url(#rb-body)" stroke="rgba(58,30,18,0.16)" strokeWidth="1.5" />
+      <ellipse cx="80" cy="111" rx="16" ry="14" fill="url(#rb-belly)" />
 
       {/* Ears */}
       <g className="tokki-ear tokki-ear--left" filter="url(#rb-soft-shadow)">
@@ -60,7 +65,10 @@ function RabbitAsset(): JSX.Element {
       </g>
 
       {/* Head */}
-      <circle className="tokki-head" cx="80" cy="74" r="38" fill="url(#rb-body)" stroke="rgba(58,30,18,0.22)" strokeWidth="1.8" />
+      <circle className="tokki-head" cx="80" cy="74" r="40" fill="url(#rb-body)" stroke="rgba(58,30,18,0.22)" strokeWidth="1.8" />
+
+      {/* Forehead tuft */}
+      <path d="M80 46 C75 48 75 55 80 57 C84 55 85 49 82 45" fill="#fff8f2" opacity="0.92" />
 
       {/* Inner-ear tufts */}
       <ellipse cx="56" cy="52" rx="3" ry="5" fill="#fff8f0" opacity="0.5" />
@@ -68,33 +76,33 @@ function RabbitAsset(): JSX.Element {
 
       {/* Eyes */}
       <g className="tokki-eye tokki-eye--left">
-        <ellipse cx="67" cy="72" rx="5.5" ry="6" fill="#2a1810" />
-        <ellipse cx="65.5" cy="70" rx="2.2" ry="2.5" fill="#fff" opacity="0.85" />
-        <ellipse cx="68.5" cy="73.5" rx="1" ry="1" fill="#fff" opacity="0.5" />
+        <ellipse cx="67" cy="73" rx="5.8" ry="6.6" fill="#2a1810" />
+        <ellipse cx="65.4" cy="70.5" rx="2.5" ry="2.9" fill="#fff" opacity="0.92" />
+        <ellipse cx="68.8" cy="74.4" rx="1.2" ry="1.2" fill="#fff" opacity="0.62" />
       </g>
       <g className="tokki-eye tokki-eye--right">
-        <ellipse cx="93" cy="72" rx="5.5" ry="6" fill="#2a1810" />
-        <ellipse cx="91.5" cy="70" rx="2.2" ry="2.5" fill="#fff" opacity="0.85" />
-        <ellipse cx="94.5" cy="73.5" rx="1" ry="1" fill="#fff" opacity="0.5" />
+        <ellipse cx="93" cy="73" rx="5.8" ry="6.6" fill="#2a1810" />
+        <ellipse cx="91.4" cy="70.5" rx="2.5" ry="2.9" fill="#fff" opacity="0.92" />
+        <ellipse cx="94.6" cy="74.4" rx="1.2" ry="1.2" fill="#fff" opacity="0.62" />
       </g>
 
       {/* Eyebrows - subtle arches */}
-      <path d="M62 64 Q67 61 72 63" fill="none" stroke="#5a3c2e" strokeWidth="1" opacity="0.25" strokeLinecap="round" />
-      <path d="M88 63 Q93 61 98 64" fill="none" stroke="#5a3c2e" strokeWidth="1" opacity="0.25" strokeLinecap="round" />
+      <path d="M62 64 Q67 61.8 72 63.8" fill="none" stroke="#5a3c2e" strokeWidth="1" opacity="0.16" strokeLinecap="round" />
+      <path d="M88 63.8 Q93 61.8 98 64" fill="none" stroke="#5a3c2e" strokeWidth="1" opacity="0.16" strokeLinecap="round" />
 
       {/* Cheeks */}
-      <ellipse className="tokki-cheek tokki-cheek--left" cx="57" cy="82" rx="8" ry="5" fill="url(#rb-cheek)" />
-      <ellipse className="tokki-cheek tokki-cheek--right" cx="103" cy="82" rx="8" ry="5" fill="url(#rb-cheek)" />
+      <ellipse className="tokki-cheek tokki-cheek--left" cx="56" cy="84" rx="9.5" ry="5.8" fill="url(#rb-cheek)" />
+      <ellipse className="tokki-cheek tokki-cheek--right" cx="104" cy="84" rx="9.5" ry="5.8" fill="url(#rb-cheek)" />
 
       {/* Nose */}
-      <ellipse cx="80" cy="79" rx="3.5" ry="2.5" fill="#e8a0a0" />
+      <path d="M80 77 C78.2 74.7 75.3 76 75.5 78.7 C75.7 81.2 78 82.4 80 84.1 C82 82.4 84.3 81.2 84.5 78.7 C84.7 76 81.8 74.7 80 77Z" fill="#f3a5b4" />
 
       {/* Mouth */}
-      <path className="tokki-mouth" d="M73 84 Q77 89 80 89 Q83 89 87 84" fill="none" stroke="#5a3018" strokeWidth="2" strokeLinecap="round" />
+      <path className="tokki-mouth" d="M73.5 85.5 Q77 90 80 90 Q83 90 86.5 85.5" fill="none" stroke="#5a3018" strokeWidth="2" strokeLinecap="round" />
 
       {/* Tiny front teeth */}
-      <rect x="77.5" y="84" width="2.2" height="3" rx="1" fill="#fff" stroke="rgba(58,30,18,0.15)" strokeWidth="0.6" />
-      <rect x="80.3" y="84" width="2.2" height="3" rx="1" fill="#fff" stroke="rgba(58,30,18,0.15)" strokeWidth="0.6" />
+      <rect x="77.5" y="85" width="2.1" height="3.1" rx="1" fill="#fff" stroke="rgba(58,30,18,0.12)" strokeWidth="0.55" />
+      <rect x="80.4" y="85" width="2.1" height="3.1" rx="1" fill="#fff" stroke="rgba(58,30,18,0.12)" strokeWidth="0.55" />
 
       {/* Zzz / snore elements */}
       <circle className="tokki-snore tokki-snore--a" cx="116" cy="66" r="4.2" />
@@ -104,8 +112,8 @@ function RabbitAsset(): JSX.Element {
       <text className="tokki-zzz tokki-zzz--c" x="132" y="38" fontSize="16" fontWeight="bold" fill="#8b7e74">Z</text>
 
       {/* Paws resting on body */}
-      <ellipse className="tokki-paw tokki-paw--left" cx="64" cy="106" rx="11" ry="9" fill="url(#rb-paw)" stroke="rgba(58,30,18,0.18)" strokeWidth="1.4" />
-      <ellipse className="tokki-paw tokki-paw--right" cx="96" cy="106" rx="11" ry="9" fill="url(#rb-paw)" stroke="rgba(58,30,18,0.18)" strokeWidth="1.4" />
+      <ellipse className="tokki-paw tokki-paw--left" cx="65" cy="108" rx="11.2" ry="9.2" fill="url(#rb-paw)" stroke="rgba(58,30,18,0.18)" strokeWidth="1.4" />
+      <ellipse className="tokki-paw tokki-paw--right" cx="95" cy="108" rx="11.2" ry="9.2" fill="url(#rb-paw)" stroke="rgba(58,30,18,0.18)" strokeWidth="1.4" />
 
       {/* Paw pad details */}
       <circle cx="62" cy="108" r="2.2" fill="#ffc5b4" opacity="0.45" />
