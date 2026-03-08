@@ -18,6 +18,8 @@ import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
 
+type HoverDecoration = "stars";
+
 function makeUserEvent(type: UserEvent["type"]): UserEvent {
   return {
     type,
@@ -27,6 +29,28 @@ function makeUserEvent(type: UserEvent["type"]): UserEvent {
 
 const DRAG_THRESHOLD = 4;
 const CHAT_PANEL_EXIT_MS = 220;
+const HOVER_DECORATION_DELAY_MS = 1800;
+const HOVER_DECORATION_VISIBLE_MS = 1900;
+const HOVER_DECORATION_COOLDOWN_MS = 1200;
+const HOVER_DECORATIONS: HoverDecoration[] = ["stars"];
+
+function pickHoverDecoration(): HoverDecoration {
+  return HOVER_DECORATIONS[0];
+}
+
+function HoverDecorationGraphic({ decoration }: { decoration: HoverDecoration }): JSX.Element {
+  switch (decoration) {
+    case "stars":
+      return (
+        <div className="tokki-hover-decor tokki-hover-decor--stars" aria-hidden="true">
+          <span className="tokki-sparkle tokki-sparkle--a" />
+          <span className="tokki-sparkle tokki-sparkle--b" />
+          <span className="tokki-sparkle tokki-sparkle--c" />
+          <span className="tokki-sparkle tokki-sparkle--d" />
+        </div>
+      );
+  }
+}
 
 export function TokkiCharacter(): JSX.Element {
   const { state, connected, avatarId, currentReply, isTyping, chatOpen } =
@@ -63,8 +87,12 @@ export function TokkiCharacter(): JSX.Element {
 
   const dragRef = useRef<{ startX: number; startY: number; dragging: boolean } | null>(null);
   const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverActiveRef = useRef(false);
   const [chatPanelVisible, setChatPanelVisible] = useState(chatOpen);
   const [chatPanelClosing, setChatPanelClosing] = useState(false);
+  const [hoverDecoration, setHoverDecoration] = useState<HoverDecoration | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -125,9 +153,58 @@ export function TokkiCharacter(): JSX.Element {
       if (panelTimerRef.current) {
         clearTimeout(panelTimerRef.current);
       }
+      if (hoverDelayRef.current) {
+        clearTimeout(hoverDelayRef.current);
+      }
+      if (hoverClearRef.current) {
+        clearTimeout(hoverClearRef.current);
+      }
     },
     []
   );
+
+  const clearHoverDecoration = useCallback((): void => {
+    hoverActiveRef.current = false;
+
+    if (hoverDelayRef.current) {
+      clearTimeout(hoverDelayRef.current);
+      hoverDelayRef.current = null;
+    }
+
+    if (hoverClearRef.current) {
+      clearTimeout(hoverClearRef.current);
+      hoverClearRef.current = null;
+    }
+
+    setHoverDecoration(null);
+  }, []);
+
+  const scheduleHoverDecoration = useCallback((delayMs: number): void => {
+    if (hoverDelayRef.current) {
+      clearTimeout(hoverDelayRef.current);
+    }
+
+    hoverDelayRef.current = setTimeout(() => {
+      if (!hoverActiveRef.current || dragRef.current?.dragging) {
+        return;
+      }
+
+      const nextDecoration = pickHoverDecoration();
+      setHoverDecoration(nextDecoration);
+
+      if (hoverClearRef.current) {
+        clearTimeout(hoverClearRef.current);
+      }
+
+      hoverClearRef.current = setTimeout(() => {
+        setHoverDecoration(null);
+        if (!hoverActiveRef.current || dragRef.current?.dragging) {
+          return;
+        }
+        scheduleHoverDecoration(HOVER_DECORATION_COOLDOWN_MS);
+      }, HOVER_DECORATION_VISIBLE_MS);
+    }, delayMs);
+  }, []);
 
   const onInteract = useCallback(
     async (type: UserEvent["type"]): Promise<void> => {
@@ -141,8 +218,9 @@ export function TokkiCharacter(): JSX.Element {
     if (event.button !== 0) {
       return;
     }
+    clearHoverDecoration();
     dragRef.current = { startX: event.screenX, startY: event.screenY, dragging: false };
-  }, []);
+  }, [clearHoverDecoration]);
 
   useEffect(() => {
     const onMouseMove = (event: globalThis.MouseEvent): void => {
@@ -176,6 +254,16 @@ export function TokkiCharacter(): JSX.Element {
     setChatOpen(!chatOpen);
     void onInteract("click");
   }, [chatOpen, onInteract, setChatOpen]);
+
+  const onAvatarMouseEnter = useCallback((): void => {
+    hoverActiveRef.current = true;
+    scheduleHoverDecoration(HOVER_DECORATION_DELAY_MS);
+    void onInteract("hover");
+  }, [onInteract, scheduleHoverDecoration]);
+
+  const onAvatarMouseLeave = useCallback((): void => {
+    clearHoverDecoration();
+  }, [clearHoverDecoration]);
 
   const onSendMessage = useCallback(
     async (message: string): Promise<void> => {
@@ -226,13 +314,13 @@ export function TokkiCharacter(): JSX.Element {
       <ChatBubble reply={currentReply} isTyping={isTyping} />
 
       <div className="tokki-stage" data-tauri-drag-region>
+        {hoverDecoration && <HoverDecorationGraphic decoration={hoverDecoration} />}
         <button
           type="button"
           className={`tokki-avatar ${actionView.toneClass} ${actionView.stateClass}`}
           onClick={onAvatarClick}
-          onMouseEnter={() => {
-            void onInteract("hover");
-          }}
+          onMouseEnter={onAvatarMouseEnter}
+          onMouseLeave={onAvatarMouseLeave}
           onMouseDown={onAvatarMouseDown}
           onContextMenu={(event) => {
             event.preventDefault();

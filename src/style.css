@@ -48,8 +48,67 @@ body {
   display: grid;
   place-items: center;
   margin: 0;
+  position: relative;
+  overflow: visible;
   background: transparent;
   border: 0;
+}
+
+.tokki-hover-decor {
+  position: absolute;
+  left: 50%;
+  top: -24px;
+  width: 136px;
+  height: 78px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  animation: hover-decor-enter 260ms var(--ease-spring) forwards;
+}
+
+.tokki-hover-decor--stars {
+  top: -18px;
+  z-index: 3;
+}
+
+.tokki-sparkle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 213, 122, 0.9));
+  clip-path: polygon(50% 0%, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0% 50%, 39% 38%);
+  box-shadow: 0 0 10px rgba(255, 217, 132, 0.45);
+  animation: sparkle-drift 1.8s var(--ease-out) infinite alternate;
+}
+
+.tokki-sparkle--a {
+  top: 10px;
+  right: 22px;
+  animation-delay: 0ms;
+}
+
+.tokki-sparkle--b {
+  top: 26px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  animation-delay: 180ms;
+}
+
+.tokki-sparkle--c {
+  top: 2px;
+  left: 18px;
+  width: 10px;
+  height: 10px;
+  animation-delay: 320ms;
+}
+
+.tokki-sparkle--d {
+  top: 24px;
+  left: 4px;
+  width: 7px;
+  height: 7px;
+  animation-delay: 500ms;
 }
 
 .tokki-avatar {
@@ -675,6 +734,28 @@ body {
   }
 }
 
+@keyframes hover-decor-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes sparkle-drift {
+  0% {
+    transform: translateY(0) scale(0.9) rotate(0deg);
+    opacity: 0.76;
+  }
+  100% {
+    transform: translateY(-6px) scale(1.08) rotate(16deg);
+    opacity: 1;
+  }
+}
+
 /* Cat avatar overrides */
 
 .tokki-asset--cat .tokki-ear-shell,
@@ -1088,6 +1169,8 @@ body {
   .tokki-avatar .tokki-tail-tip,
   .tokki-avatar .tokki-snore,
   .tokki-avatar .tokki-zzz,
+  .tokki-hover-decor,
+  .tokki-sparkle,
   .chat-bubble,
   .chat-bubble__dot,
   .tokki-chat-panel,
@@ -1106,6 +1189,12 @@ body {
 }
 
 @media (max-width: 640px) {
+  .tokki-hover-decor {
+    top: -18px;
+    width: 112px;
+    height: 64px;
+  }
+
   .tokki-avatar {
     width: 96px;
     height: 96px;
