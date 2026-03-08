@@ -15,7 +15,6 @@ import { useTokkiStore } from "../../state/useTokkiStore";
 import type { LlmResponse, UserEvent } from "../../types/tokki";
 import { AvatarPicker } from "./AvatarPicker";
 import { ChatBubble } from "./ChatBubble";
-import { ChatHistory } from "./ChatHistory";
 import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
 
@@ -30,7 +29,7 @@ const DRAG_THRESHOLD = 4;
 const CHAT_PANEL_EXIT_MS = 220;
 
 export function TokkiCharacter(): JSX.Element {
-  const { state, connected, avatarId, currentReply, isTyping, chatMessages, chatOpen } =
+  const { state, connected, avatarId, currentReply, isTyping, chatOpen } =
     useTokkiStore(
       useShallow((store) => ({
         state: store.state,
@@ -38,7 +37,6 @@ export function TokkiCharacter(): JSX.Element {
         avatarId: store.avatarId,
         currentReply: store.currentReply,
         isTyping: store.isTyping,
-        chatMessages: store.chatMessages,
         chatOpen: store.chatOpen
       }))
     );
@@ -251,7 +249,6 @@ export function TokkiCharacter(): JSX.Element {
         <div
           className={`tokki-chat-panel ${chatPanelClosing ? "tokki-chat-panel--closing" : "tokki-chat-panel--open"}`}
         >
-          <ChatHistory messages={chatMessages} isTyping={isTyping} />
           <AvatarPicker />
           <ChatInput
             onSend={(msg) => {

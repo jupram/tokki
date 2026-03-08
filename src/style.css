@@ -911,87 +911,6 @@ body {
   gap: 6px;
 }
 
-.chat-history {
-  max-height: 168px;
-  overflow-y: auto;
-  padding: 10px;
-  border-radius: 20px;
-  border: 1px solid rgba(180, 150, 120, 0.18);
-  background:
-    linear-gradient(180deg, rgba(255, 252, 245, 0.94), rgba(255, 247, 236, 0.9)),
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.42), transparent 64%);
-  box-shadow:
-    0 10px 24px rgba(80, 50, 20, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(180, 140, 100, 0.55) transparent;
-}
-
-.chat-history::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-history::-webkit-scrollbar-thumb {
-  background: rgba(180, 140, 100, 0.45);
-  border-radius: 999px;
-}
-
-.chat-history__empty {
-  margin: 0;
-  color: #8e7359;
-  font-size: 12px;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.chat-history__item {
-  display: grid;
-  gap: 3px;
-}
-
-.chat-history__item + .chat-history__item {
-  margin-top: 8px;
-}
-
-.chat-history__item--user {
-  justify-items: end;
-}
-
-.chat-history__role {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8c7053;
-}
-
-.chat-history__text {
-  margin: 0;
-  max-width: 100%;
-  padding: 8px 10px;
-  border-radius: 14px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #3a2a1a;
-  word-break: break-word;
-  box-shadow: 0 6px 14px rgba(80, 50, 20, 0.05);
-}
-
-.chat-history__item--assistant .chat-history__text {
-  background: rgba(255, 255, 255, 0.78);
-  border-bottom-left-radius: 6px;
-}
-
-.chat-history__item--user .chat-history__text {
-  background: rgba(233, 213, 190, 0.78);
-  border-bottom-right-radius: 6px;
-}
-
-.chat-history__item--typing .chat-history__text {
-  color: #7f6550;
-  font-style: italic;
-}
-
 .avatar-picker__btn {
   width: 30px;
   height: 30px;
@@ -1157,10 +1076,6 @@ body {
     opacity: 1;
     transform: none;
   }
-
-  .chat-history {
-    scroll-behavior: auto;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1211,27 +1126,11 @@ body {
   .tokki-card--chat-open .tokki-chat-panel {
     max-width: 156px;
     margin-top: 2px;
-    gap: 4px;
+    gap: 3px;
   }
 
   .tokki-card--chat-open .avatar-picker {
     gap: 3px;
-  }
-
-  .tokki-card--chat-open .chat-history {
-    max-height: 84px;
-    padding: 6px;
-    border-radius: 14px;
-  }
-
-  .tokki-card--chat-open .chat-history__empty,
-  .tokki-card--chat-open .chat-history__text {
-    font-size: 10px;
-    line-height: 1.3;
-  }
-
-  .tokki-card--chat-open .chat-history__role {
-    font-size: 8px;
   }
 
   .tokki-card--chat-open .avatar-picker__btn {
