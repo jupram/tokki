@@ -18,6 +18,8 @@ import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
 
+type HoverDecoration = "stars";
+
 function makeUserEvent(type: UserEvent["type"]): UserEvent {
   return {
     type,
@@ -75,6 +77,9 @@ export function TokkiCharacter(): JSX.Element {
 
   const dragRef = useRef<{ startX: number; startY: number; dragging: boolean } | null>(null);
   const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverActiveRef = useRef(false);
   const [chatPanelVisible, setChatPanelVisible] = useState(chatOpen);
   const [chatPanelClosing, setChatPanelClosing] = useState(false);
   const [isAvatarHovered, setIsAvatarHovered] = useState(false);
@@ -139,6 +144,12 @@ export function TokkiCharacter(): JSX.Element {
       if (panelTimerRef.current) {
         clearTimeout(panelTimerRef.current);
       }
+      if (hoverDelayRef.current) {
+        clearTimeout(hoverDelayRef.current);
+      }
+      if (hoverClearRef.current) {
+        clearTimeout(hoverClearRef.current);
+      }
     },
     []
   );
@@ -176,7 +187,7 @@ export function TokkiCharacter(): JSX.Element {
     setIsAvatarHovered(false);
     setShowHoverSparkles(false);
     dragRef.current = { startX: event.screenX, startY: event.screenY, dragging: false };
-  }, []);
+  }, [clearHoverDecoration]);
 
   useEffect(() => {
     const onMouseMove = (event: globalThis.MouseEvent): void => {
