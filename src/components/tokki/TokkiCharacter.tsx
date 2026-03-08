@@ -187,7 +187,7 @@ export function TokkiCharacter(): JSX.Element {
     setIsAvatarHovered(false);
     setShowHoverSparkles(false);
     dragRef.current = { startX: event.screenX, startY: event.screenY, dragging: false };
-  }, [clearHoverDecoration]);
+  }, []);
 
   useEffect(() => {
     const onMouseMove = (event: globalThis.MouseEvent): void => {
