@@ -4,7 +4,7 @@ Tokki is a compact desktop micro-companion built with Tauri + React. It runs an 
 
 ## Current Status (March 5, 2026)
 
-Phase 1 runtime is implemented and working end-to-end.
+Core runtime is implemented and working end-to-end, and chat now uses the Tauri `request_llm_reply` path when an LLM endpoint is configured.
 
 ## What Has Been Achieved So Far
 
@@ -22,10 +22,19 @@ Phase 1 runtime is implemented and working end-to-end.
   - `handle_user_interaction`
   - `get_current_state`
   - `advance_tick`
+  - `request_llm_reply`
 - Event bridge is wired (`tokki://behavior_tick`) from Rust to React.
 - Frontend state loop is implemented with typed models and Zustand store.
-- Avatar rendering is implemented with a reusable SVG asset and CSS-driven animation states.
+- Avatar rendering is implemented with SVG asset mapping and CSS-driven animation states.
 - Runtime fallback simulator exists for non-Tauri/browser runs.
+- LLM request path is implemented in Rust using `reqwest`:
+  - Endpoint and model can be configured.
+  - Missing endpoint returns `llm not configured`.
+  - Non-standard endpoints are rejected.
+  - Supported endpoint shapes are OpenAI-compatible (`/v1/responses`, `/v1/chat/completions`) and Azure OpenAI deployment equivalents.
+- Chat behavior is wired with graceful fallback:
+  - If LLM endpoint is configured, Tokki requests live replies via `request_llm_reply`.
+  - If no endpoint is configured, Tokki falls back to canned/local replies.
 - Stability fixes were added:
   - Runtime state recovery when the behavior loop exits.
   - More reliable drag handling for Tokki interactions.
@@ -35,25 +44,23 @@ Phase 1 runtime is implemented and working end-to-end.
   - E2E smoke tests (`playwright`)
 - CI and release automation are present:
   - CI workflow for typecheck, unit/e2e tests, and Rust tests.
-  - Draft release workflow on version tags (`v*`).
+  - Draft release workflow on version tags (`v*`) that publishes Windows bundles.
 
 ## Known Gaps (Not Done Yet)
 
-- No LLM integration yet (prompting, tool orchestration, response parsing).
 - No conversation memory or persistent profile/state.
-- No text chat input UI yet.
 - No intent planner that maps language to richer behavior sequences.
+- No streaming/tool-calling orchestration for LLM responses.
 
 ## Next Phase (Phase 2)
 
 Focus: conversational intelligence and persistent behavior context.
 
-1. Add secure LLM orchestration in Rust.
-2. Define a strict response schema (`line`, `mood`, `animation`, `intent`) and validation path.
-3. Add session memory + lightweight persistence for continuity between interactions.
-4. Add chat input UI and connect it to runtime intents/actions.
-5. Expand animation system to support multiple reusable assets and richer transition states.
-6. Expand tests to cover LLM schema parsing and intent-to-action mapping.
+1. Define a strict structured response schema (`line`, `mood`, `animation`, `intent`) and validation path.
+2. Add session memory + lightweight persistence for continuity between interactions.
+3. Map language intents to richer behavior/action sequences.
+4. Expand animation assets and transitions.
+5. Expand tests for LLM parsing, endpoint validation, and intent-to-action mapping.
 
 ## Local Development
 
@@ -69,6 +76,18 @@ Focus: conversational intelligence and persistent behavior context.
 npm install
 npm run tauri dev
 ```
+
+Optional LLM configuration:
+
+- `TOKKI_LLM_ENDPOINT`: LLM HTTP endpoint used by the `request_llm_reply` Tauri command.
+  Only standard OpenAI-compatible endpoint shapes are allowed:
+  - `/v1/responses`
+  - `/v1/chat/completions`
+  - Azure OpenAI equivalents under `/openai/deployments/{deployment}/.../(responses|chat/completions)`
+- `TOKKI_LLM_MODEL`: Optional model name override (defaults to `gpt-4o-mini`).
+- `TOKKI_LLM_API_KEY`: Optional bearer token sent as `Authorization: Bearer <token>`.
+- If no endpoint is configured, `request_llm_reply` returns `llm not configured`.
+- If endpoint format is non-standard, `request_llm_reply` returns an error.
 
 ### Validate
 

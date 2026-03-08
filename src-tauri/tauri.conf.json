@@ -14,8 +14,8 @@
       {
         "label": "main",
         "title": "tokki",
-        "width": 320,
-        "height": 380,
+        "width": 180,
+        "height": 180,
         "resizable": false,
         "decorations": false,
         "transparent": true,

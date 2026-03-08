@@ -1,7 +1,8 @@
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use super::models::{
-    BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent, UserEventType,
+    BehaviorAction, BehaviorTickPayload, Mood, TokkiState, TransitionReason, UserEvent,
+    UserEventType,
 };
 
 #[derive(Debug)]
@@ -25,14 +26,6 @@ impl BehaviorEngine {
 
     pub fn current_state(&self) -> TokkiState {
         self.state.clone()
-    }
-
-    pub fn apply_action(&mut self, action: BehaviorAction) {
-        self.state.current_action = action;
-    }
-
-    pub fn set_energy(&mut self, energy: u8) {
-        self.state.energy = energy.min(100);
     }
 
     pub fn tick(
@@ -244,7 +237,7 @@ mod tests {
 
         assert_eq!(tick.state.current_action.id, "react_poke");
         assert_eq!(tick.reason, TransitionReason::Interaction);
-        assert_eq!(tick.state.current_action.interruptible, false);
+        assert!(!tick.state.current_action.interruptible);
     }
 
     #[test]
