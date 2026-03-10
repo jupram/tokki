@@ -172,10 +172,11 @@ impl OllamaProvider {
             return Err(format!("Ollama returned status {}", response.status()));
         }
 
-        let api_response: OllamaResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("failed to parse response: {e}"))?;
+        let api_response: OllamaResponse = {
+            let body = super::read_bounded_body(response).await?;
+            serde_json::from_slice(&body)
+                .map_err(|e| format!("failed to parse response: {e}"))?
+        };
 
         if let Some(error) = api_response.error {
             return Err(format!("Ollama error: {error}"));

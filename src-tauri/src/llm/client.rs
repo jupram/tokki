@@ -148,10 +148,11 @@ impl LlmClient {
             return Err(format!("API returned status {}", response.status()));
         }
 
-        let api_response: LlmApiResponse = response
-            .json()
-            .await
-            .map_err(|error| format!("failed to parse response: {error}"))?;
+        let api_response: LlmApiResponse = {
+            let body = super::read_bounded_body(response).await?;
+            serde_json::from_slice(&body)
+                .map_err(|error| format!("failed to parse response: {error}"))?
+        };
 
         if let Some(error) = api_response.error {
             if !error.is_empty() {
