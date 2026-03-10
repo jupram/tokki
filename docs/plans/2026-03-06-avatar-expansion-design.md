@@ -1,3 +1,7 @@
+> [Docs home](../README.md) / Historical plans
+>
+> Historical design artifact from March 2026. Keep it as creative/product context, but verify implementation details against the current `src/features/avatars/` structure before acting on it.
+
 # Avatar Expansion Design — 11 Characters with Mood-Triggered FX
 
 **Date**: 2026-03-06

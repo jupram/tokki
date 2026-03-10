@@ -9,11 +9,14 @@ export type TokkiAnimationStateId =
   | "idle_slowblink"
   | "idle_yawn"
   | "idle_headturn"
+  | "idle_stretch"
   | "rest_nap"
   | "react_poke"
   | "react_hover"
   | "react_drag"
-  | "react_click";
+  | "react_click"
+  | "react_wake"
+  | "react_pet";
 
 export interface ActionViewModel {
   assetId: TokkiAssetId;
@@ -23,7 +26,9 @@ export interface ActionViewModel {
   label: string;
 }
 
-const ACTION_MAP: Record<string, Omit<ActionViewModel, "assetId">> = {
+type ActionViewTemplate = Omit<ActionViewModel, "assetId">;
+
+const ACTION_MAP: Record<TokkiAnimationStateId, ActionViewTemplate> = {
   idle_blink: {
     stateId: "idle_blink",
     stateClass: "state-idle-blink",
@@ -95,17 +100,67 @@ const ACTION_MAP: Record<string, Omit<ActionViewModel, "assetId">> = {
     stateClass: "state-idle-headturn",
     toneClass: "tone-curious",
     label: "Looking Around"
+  },
+  idle_stretch: {
+    stateId: "idle_stretch",
+    stateClass: "state-idle-stretch",
+    toneClass: "tone-playful",
+    label: "Stretching"
+  },
+  react_wake: {
+    stateId: "react_wake",
+    stateClass: "state-react-wake",
+    toneClass: "tone-surprised",
+    label: "Waking Up"
+  },
+  react_pet: {
+    stateId: "react_pet",
+    stateClass: "state-react-pet",
+    toneClass: "tone-playful",
+    label: "Being Petted"
   }
 };
 
-const FALLBACK: Omit<ActionViewModel, "assetId"> = {
+const ACTION_ID_BY_ANIMATION: Record<string, TokkiAnimationStateId> = {
+  "idle.blink": "idle_blink",
+  "idle.hop": "idle_hop",
+  "idle.look": "idle_look",
+  "idle.sneeze": "idle_sneeze",
+  "idle.slowblink": "idle_slowblink",
+  "idle.yawn": "idle_yawn",
+  "idle.headturn": "idle_headturn",
+  "idle.stretch": "idle_stretch",
+  "rest.nap": "rest_nap",
+  "react.poke": "react_poke",
+  "react.hover": "react_hover",
+  "react.drag": "react_drag",
+  "react.click": "react_click",
+  "react.wake": "react_wake",
+  "react.pet": "react_pet"
+};
+
+const FALLBACK: ActionViewTemplate = {
   stateId: "idle_blink",
   stateClass: "state-idle-blink",
   toneClass: "tone-idle",
   label: "Idle"
 };
 
-export function mapActionToView(action: BehaviorAction, avatarId: TokkiAssetId = "rabbit_v1"): ActionViewModel {
-  const base = ACTION_MAP[action.id] ?? FALLBACK;
+function normalizeActionId(action: BehaviorAction): TokkiAnimationStateId | null {
+  const normalizedId = typeof action.id === "string"
+    ? action.id.replace(/\./g, "_")
+    : "";
+  if (normalizedId in ACTION_MAP) {
+    return normalizedId as TokkiAnimationStateId;
+  }
+
+  return typeof action.animation === "string"
+    ? ACTION_ID_BY_ANIMATION[action.animation] ?? null
+    : null;
+}
+
+export function mapActionToView(action: BehaviorAction, avatarId: TokkiAssetId = "rabbit_v2"): ActionViewModel {
+  const actionId = normalizeActionId(action);
+  const base = actionId ? ACTION_MAP[actionId] : FALLBACK;
   return { ...base, assetId: avatarId };
 }

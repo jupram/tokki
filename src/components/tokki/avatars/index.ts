@@ -1,4 +1,4 @@
-import type { AvatarId } from "../../../types/tokki";
+import { FRONTEND_AVATAR_IDS, type AvatarId } from "../../../types/tokki";
 import type { AvatarFXMap } from "./types";
 import type { JSX } from "react";
 
@@ -22,21 +22,18 @@ export function getAvatar(id: AvatarId): AvatarEntry | undefined {
 }
 
 export function getAllAvatars(): AvatarEntry[] {
-  return Array.from(registry.values());
+  return FRONTEND_AVATAR_IDS.flatMap((id) => {
+    const entry = registry.get(id);
+    return entry ? [entry] : [];
+  });
 }
 
 // Import all avatars to trigger registration
-import "./RabbitV1";
 import "./RabbitV2";
 import "./CatV1";
-import "./CatV2";
-import "./FoxV1";
 import "./FoxV2";
 import "./Dog";
 import "./Penguin";
-import "./Serpent";
-import "./Turtle";
 import "./Kitsune";
 import "./Dragon";
-import "./Phoenix";
 import "./CelestialOwl";

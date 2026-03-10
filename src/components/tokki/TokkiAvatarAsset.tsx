@@ -10,6 +10,6 @@ export function TokkiAvatarAsset({ assetId }: TokkiAvatarAssetProps): JSX.Elemen
   if (entry) {
     return <entry.Component />;
   }
-  const fallback = getAvatar("rabbit_v1");
+  const fallback = getAvatar("rabbit_v2");
   return fallback ? <fallback.Component /> : <div />;
 }

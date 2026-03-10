@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "productName": "Tokki",
+  "repository": {
+    "owner": "jupram",
+    "name": "tokki",
+    "apiBaseUrl": "https://api.github.com",
+    "rawBaseUrlTemplate": "https://raw.githubusercontent.com/{owner}/{name}/{ref}/scripts/windows",
+    "bootstrapRef": "main"
+  },
+  "install": {
+    "rootDir": "%LOCALAPPDATA%\\Tokki",
+    "appDirName": "app",
+    "binDirName": "bin",
+    "stateDirName": "state",
+    "logsDirName": "logs",
+    "cacheDirName": "cache",
+    "backupDirName": "app.previous",
+    "executableName": "tokki.exe",
+    "startMenuFolder": "Tokki",
+    "shortcutName": "Tokki.lnk",
+    "updateShortcutName": "Update Tokki.lnk"
+  },
+  "release": {
+    "preferredExtension": ".zip",
+    "artifactNameTemplate": "tokki_{version}_{architecture}.zip",
+    "workflowArtifactNameTemplate": "tokki-windows-release-{architecture}",
+    "outputDirectory": "dist\\release\\windows",
+    "payloadDirectoryName": "tokki",
+    "assetSelectors": [
+      {
+        "architecture": "x64",
+        "patterns": [
+          "(?i)^tokki_.*_x64.*\\.zip$",
+          "(?i)^tokki.*x64.*\\.zip$"
+        ]
+      },
+      {
+        "architecture": "arm64",
+        "patterns": [
+          "(?i)^tokki_.*_arm64.*\\.zip$",
+          "(?i)^tokki.*arm64.*\\.zip$"
+        ]
+      },
+      {
+        "architecture": "neutral",
+        "patterns": [
+          "(?i)^tokki(?!.*(?:x64|arm64)).*\\.zip$"
+        ]
+      }
+    ]
+  },
+  "supportFiles": [
+    "Tokki.ps1",
+    "Install-Tokki.ps1",
+    "Update-Tokki.ps1",
+    "Tokki.Common.psm1",
+    "Tokki.Release.json"
+  ]
+}

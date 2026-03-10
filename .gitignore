@@ -14,3 +14,23 @@ Thumbs.db
 CLAUDE.md
 
 KNOWLEDGE_TRANSFER.md
+
+# Agent/debug temp files
+*.log
+out.txt
+out2.log
+errors.txt
+latest-errors.txt
+cargo_test_output.txt
+e2e-test-output.txt
+test_output.txt
+tsc_out.txt
+typecheck.log
+typecheck_output.txt
+unit_test_output.txt
+vitest_final.log
+vitest_output.txt
+validate_script.ps1
+validate_steps.bat
+todos.db
+nul

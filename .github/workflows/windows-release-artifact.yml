@@ -1,0 +1,117 @@
+name: Release Artifact Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Package Windows release artifact
+        if: matrix.platform == 'windows'
+        id: package_windows
+        shell: powershell
+        run: |
+          $release = .\scripts\windows\New-TokkiReleaseArtifact.ps1
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_path=$($release.ArtifactPath)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "checksum_path=$($release.ChecksumPath)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "workflow_artifact_name=$($release.WorkflowArtifactName)"
+
+      - name: Validate Windows packaged artifact
+        if: matrix.platform == 'windows'
+        shell: powershell
+        run: |
+          .\scripts\windows\Test-TokkiReleaseArtifact.ps1 -ArtifactPath "${{ steps.package_windows.outputs.artifact_path }}"
+          .\scripts\windows\Test-TokkiUpdateReliability.ps1 | Out-Null
+
+      - name: Package macOS release artifact
+        if: matrix.platform == 'macos'
+        id: package_macos
+        shell: pwsh
+        run: |
+          $release = .\scripts\release\New-TokkiMacosReleaseArtifact.ps1
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_path=$($release.ArtifactPath)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "checksum_path=$($release.ChecksumPath)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "workflow_artifact_name=$($release.WorkflowArtifactName)"
+
+      - name: Validate macOS packaged artifact
+        if: matrix.platform == 'macos'
+        shell: pwsh
+        run: .\scripts\release\Test-TokkiMacosReleaseArtifact.ps1 -ArtifactPath "${{ steps.package_macos.outputs.artifact_path }}"
+
+      - name: Upload Windows release artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package_windows.outputs.workflow_artifact_name }}
+          path: |
+            ${{ steps.package_windows.outputs.artifact_path }}
+            ${{ steps.package_windows.outputs.checksum_path }}
+
+      - name: Upload macOS release artifact
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package_macos.outputs.workflow_artifact_name }}
+          path: |
+            ${{ steps.package_macos.outputs.artifact_path }}
+            ${{ steps.package_macos.outputs.checksum_path }}
+
+  verify-release-set:
+    needs: package
+    runs-on: windows-latest
+    env:
+      TOKKI_REQUIRE_SIGNATURES: ${{ vars.TOKKI_REQUIRE_SIGNATURES || 'false' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist\release\ci-artifacts
+
+      - name: Verify checksums and signing readiness
+        id: manifest
+        shell: powershell
+        run: |
+          $requireSignatures = "$env:TOKKI_REQUIRE_SIGNATURES".ToLowerInvariant() -eq 'true'
+          $manifest = .\scripts\release\New-TokkiReleaseManifest.ps1 -ReleaseRoot 'dist\release\ci-artifacts' -ManifestPath 'dist\release\ci-artifacts\tokki-release-manifest.json' -RequiredPlatforms @('windows', 'macos') -RequireSignatures:$requireSignatures
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "manifest_path=$($manifest.ManifestPath)"
+
+      - name: Upload release manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tokki-release-manifest
+          path: ${{ steps.manifest.outputs.manifest_path }}

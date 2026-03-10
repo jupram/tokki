@@ -1,105 +1,72 @@
-# tokki
+# Tokki
 
-Tokki is a compact desktop micro-companion built with Tauri + React. It runs an autonomous behavior loop, reacts to user input, and exposes a typed runtime bridge between Rust and the UI.
+Tokki is a desktop micro-companion built with **Tauri 2**, **Rust**, **React 18**, **Zustand**, and **TypeScript**. It lives on the desktop, runs an autonomous behavior loop, reacts to touch and mood, chats online or offline, and keeps the relationship local and private.
 
-## Current Status (March 5, 2026)
+## Documentation
 
-Core runtime is implemented and working end-to-end, and chat now uses the Tauri `request_llm_reply` path when an LLM endpoint is configured.
+- **[docs/README.md](docs/README.md)** — main documentation index
+- **[CLAUDE.md](CLAUDE.md)** — comprehensive project guide, architecture, and conventions
+- **[docs/windows-install-update.md](docs/windows-install-update.md)** — Windows install/update flow
+- **[docs/release-readiness-checklist.md](docs/release-readiness-checklist.md)** — release checklist
+- **[docs/analysis/README.md](docs/analysis/README.md)** — organized audits and diagnostic reports
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Copilot-specific repo guidance
 
-## What Has Been Achieved So Far
+## Current product shape
 
-- Desktop shell is in place (`Tauri 2` + `React` + `Vite` + `TypeScript`).
-- Compact Tokki window is configured and working:
-  - 180x180 footprint, transparent, undecorated, non-resizable, always-on-top.
-  - Draggable avatar/window behavior is wired through Tauri window dragging.
-- Rust behavior engine is implemented:
-  - Seeded deterministic idle actions (`idle_blink`, `idle_hop`, `idle_look`).
-  - Interaction reactions (`react_click`, `react_hover`, `react_drag`, `react_poke`).
-  - Energy decay/recovery model and low-energy rest action (`rest_nap`).
-- Runtime loop + command layer is live:
-  - `start_behavior_loop`
-  - `stop_behavior_loop`
-  - `handle_user_interaction`
-  - `get_current_state`
-  - `advance_tick`
-  - `request_llm_reply`
-- Event bridge is wired (`tokki://behavior_tick`) from Rust to React.
-- Frontend state loop is implemented with typed models and Zustand store.
-- Avatar rendering is implemented with SVG asset mapping and CSS-driven animation states.
-- Runtime fallback simulator exists for non-Tauri/browser runs.
-- LLM request path is implemented in Rust using `reqwest`:
-  - Endpoint and model can be configured.
-  - Missing endpoint returns `llm not configured`.
-  - Non-standard endpoints are rejected.
-  - Supported endpoint shapes are OpenAI-compatible (`/v1/responses`, `/v1/chat/completions`) and Azure OpenAI deployment equivalents.
-- Chat behavior is wired with graceful fallback:
-  - If LLM endpoint is configured, Tokki requests live replies via `request_llm_reply`.
-  - If no endpoint is configured, Tokki falls back to canned/local replies.
-- Stability fixes were added:
-  - Runtime state recovery when the behavior loop exits.
-  - More reliable drag handling for Tokki interactions.
-- Test coverage is in place:
-  - Frontend unit tests (`vitest`)
-  - Rust unit tests (`cargo test`)
-  - E2E smoke tests (`playwright`)
-- CI and release automation are present:
-  - CI workflow for typecheck, unit/e2e tests, and Rust tests.
-  - Draft release workflow on version tags (`v*`) that publishes Windows bundles.
+Tokki currently includes:
 
-## Known Gaps (Not Done Yet)
+- autonomous desktop behavior with a Rust-driven runtime loop
+- Tauri and browser-fallback chat flows
+- local/private memory with export and import
+- onboarding, provider setup, and offline fallback behavior
+- a richer popup with relationship snapshot, compact avatar switching, privacy mode, and settings feedback
+- unit, e2e, and Rust test coverage
 
-- No conversation memory or persistent profile/state.
-- No intent planner that maps language to richer behavior sequences.
-- No streaming/tool-calling orchestration for LLM responses.
-
-## Next Phase (Phase 2)
-
-Focus: conversational intelligence and persistent behavior context.
-
-1. Define a strict structured response schema (`line`, `mood`, `animation`, `intent`) and validation path.
-2. Add session memory + lightweight persistence for continuity between interactions.
-3. Map language intents to richer behavior/action sequences.
-4. Expand animation assets and transitions.
-5. Expand tests for LLM parsing, endpoint validation, and intent-to-action mapping.
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+
-- Rust toolchain (`rustup`)
-- Tauri prerequisites for your OS
-
-### Run
+## Quick start
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-Optional LLM configuration:
-
-- `TOKKI_LLM_ENDPOINT`: LLM HTTP endpoint used by the `request_llm_reply` Tauri command.
-  Only standard OpenAI-compatible endpoint shapes are allowed:
-  - `/v1/responses`
-  - `/v1/chat/completions`
-  - Azure OpenAI equivalents under `/openai/deployments/{deployment}/.../(responses|chat/completions)`
-- `TOKKI_LLM_MODEL`: Optional model name override (defaults to `gpt-4o-mini`).
-- `TOKKI_LLM_API_KEY`: Optional bearer token sent as `Authorization: Bearer <token>`.
-- If no endpoint is configured, `request_llm_reply` returns `llm not configured`.
-- If endpoint format is non-standard, `request_llm_reply` returns an error.
-
-### Validate
+Useful validation commands:
 
 ```bash
-npm run typecheck
+npm run lint
 npm run test:unit
 npm run test:e2e
 cargo test --manifest-path src-tauri/Cargo.toml
+npm run build
 ```
 
-### Build
+## Architecture at a glance
 
-```bash
-npm run tauri build
+- `src-tauri/src/` — runtime, commands, LLM/provider logic, persistence, native integration
+- `src/core/TokkiCharacter.tsx` — main frontend orchestrator
+- `src/bridge/tauri.ts` — Tauri/browser bridge seam
+- `src/state/useTokkiStore.ts` — flat Zustand store for UI runtime state
+- `src/features/` — avatars, chat, games, HUD, onboarding, settings
+- `src/style.css` — centralized visual state, layout, and animation system
+
+## Product principles
+
+- **Companion-first** — Tokki should feel alive, not like a dashboard widget
+- **Offline-first** — core behavior and graceful fallback should work without the cloud
+- **Private by default** — memory stays local and encrypted
+- **Low-friction** — setup, updates, and day-to-day interaction should stay lightweight
+
+## Repository layout
+
+```text
+docs/                 documentation index, analysis reports, plans, release/install guides
+src/                  React frontend
+src-tauri/            Rust backend/runtime
+tests/                Playwright coverage
+scripts/              automation and release scripts
+.github/              workflows and Copilot instructions
 ```
+
+## Notes
+
+- The authoritative developer reference lives in **[CLAUDE.md](CLAUDE.md)**.
+- Historical analysis and planning docs have been moved under **[docs/](docs/README.md)** to keep the repo root focused.

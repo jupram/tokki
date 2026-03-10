@@ -1,3 +1,7 @@
+> [Docs home](../README.md) / Historical plans
+>
+> Historical implementation plan from March 2026. It captures the original proposal and may reference older paths such as `src/components/tokki/avatars/`; the live avatar system in this repo now lives under `src/features/avatars/`.
+
 # Avatar Expansion Implementation Plan — 11 Characters with Mood-Triggered FX
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
