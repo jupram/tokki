@@ -1,74 +1,69 @@
 # tokki
 
-Tokki is a compact desktop micro-companion built with Tauri + React. It runs an autonomous behavior loop, reacts to user input, and exposes a typed runtime bridge between Rust and the UI.
+Tokki is a compact desktop companion built with Tauri, React, TypeScript, and Rust. It runs a small autonomous behavior engine, reacts to direct user interaction, and can reply through a configurable LLM endpoint with a local fallback path when no model is configured.
 
-## Current Status (March 13, 2026)
+## Status
 
-Core runtime is implemented and working end-to-end, and chat now uses the Tauri `request_llm_reply` path when an LLM endpoint is configured.
+As of March 13, 2026, the desktop app is functional end-to-end for the current prototype scope: runtime loop, interactive avatar, chat panel, multi-avatar presentation, test coverage, and Windows release automation are all in place.
 
-## What Has Been Achieved So Far
+## What Is Done So Far
 
-- Desktop shell is in place (`Tauri 2` + `React` + `Vite` + `TypeScript`).
-- Compact Tokki window is configured and working:
-  - 180x180 footprint, transparent, undecorated, non-resizable, always-on-top.
-  - Draggable avatar/window behavior is wired through Tauri window dragging.
-- Rust behavior engine is implemented:
-  - Seeded deterministic idle actions (`idle_blink`, `idle_hop`, `idle_look`).
-  - Interaction reactions (`react_click`, `react_hover`, `react_drag`, `react_poke`).
-  - Energy decay/recovery model and low-energy rest action (`rest_nap`).
-- Runtime loop + command layer is live:
-  - `start_behavior_loop`
-  - `stop_behavior_loop`
-  - `handle_user_interaction`
-  - `get_current_state`
-  - `advance_tick`
-  - `request_llm_reply`
-- Event bridge is wired (`tokki://behavior_tick`) from Rust to React.
-- Frontend state loop is implemented with typed models and Zustand store.
-- Avatar rendering is implemented with SVG asset mapping and CSS-driven animation states.
-- Runtime fallback simulator exists for non-Tauri/browser runs.
-- LLM request path is implemented in Rust using `reqwest`:
-  - Endpoint and model can be configured.
-  - Missing endpoint returns `llm not configured`.
-  - Non-standard endpoints are rejected.
-  - Supported endpoint shapes are OpenAI-compatible (`/v1/responses`, `/v1/chat/completions`) and Azure OpenAI deployment equivalents.
-- Chat behavior is wired with graceful fallback:
-  - If LLM endpoint is configured, Tokki requests live replies via `request_llm_reply`.
-  - If no endpoint is configured, Tokki falls back to canned/local replies.
-- Stability fixes were added:
-  - Runtime state recovery when the behavior loop exits.
-  - More reliable drag handling for Tokki interactions.
-- Test coverage is in place:
-  - Frontend unit tests (`vitest`)
-  - Rust unit tests (`cargo test`)
-  - E2E smoke tests (`playwright`)
-- CI and release automation are present:
-  - CI workflow for typecheck, unit/e2e tests, and Rust tests.
-  - Draft release workflow on version tags (`v*`) that publishes Windows bundles.
+- Desktop shell is implemented with `Tauri 2 + React + Vite + TypeScript`.
+- Tokki runs in a compact transparent desktop window:
+  - undecorated, always-on-top, non-resizable base shell
+  - draggable avatar/window interaction via Tauri window dragging
+  - dynamic window resizing when chat UI opens or content grows
+- Rust runtime and behavior engine are wired end-to-end:
+  - deterministic seeded idle actions: `idle_blink`, `idle_hop`, `idle_look`
+  - interaction reactions: `react_click`, `react_hover`, `react_drag`, `react_poke`
+  - energy model with recovery/decay and low-energy `rest_nap`
+  - typed command bridge for loop control, interaction handling, state reads, and LLM requests
+- Event flow is connected from Rust to the frontend through `tokki://behavior_tick`.
+- Frontend state management is implemented with typed models and Zustand.
+- Chat is working with two paths:
+  - live Tauri `request_llm_reply` calls when a supported endpoint is configured
+  - local canned replies when no endpoint is configured or the browser fallback is used
+- LLM endpoint validation is implemented:
+  - accepts OpenAI-compatible `/v1/responses`
+  - accepts OpenAI-compatible `/v1/chat/completions`
+  - accepts Azure OpenAI deployment equivalents
+  - rejects non-standard endpoint shapes
+- Avatar presentation has expanded beyond the original rabbit:
+  - selectable avatars in the UI
+  - current shipped set: rabbit, cat, dog, penguin, celestial owl
+  - avatar-specific rendering and particle/FX layers
+- Browser/non-Tauri fallback behavior exists for local frontend development.
+- Automated quality checks are present:
+  - frontend typecheck
+  - Vitest unit tests
+  - Playwright smoke tests
+  - Rust tests
+- GitHub automation is present:
+  - CI on `main` and pull requests
+  - draft Windows release creation on version tags
 
-## Known Gaps (Not Done Yet)
+## Current Limits
 
-- No conversation memory or persistent profile/state.
-- No intent planner that maps language to richer behavior sequences.
-- No streaming/tool-calling orchestration for LLM responses.
+- No persistent memory or long-term profile/state yet.
+- No intent planner that maps language into richer multi-step behavior.
+- No streaming or tool-calling response orchestration.
+- Avatar choice is currently frontend-managed; it is not yet persisted as profile state.
 
-## Next Phase
+## Next Likely Work
 
-Focus: conversational intelligence and persistent behavior context.
-
-1. Define a strict structured response schema (`line`, `mood`, `animation`, `intent`) and validation path.
-2. Add session memory + lightweight persistence for continuity between interactions.
-3. Map language intents to richer behavior/action sequences.
-4. Expand animation assets and transitions.
-5. Expand tests for LLM parsing, endpoint validation, and intent-to-action mapping.
+1. Add persistence for memory, profile state, and avatar selection.
+2. Introduce structured LLM responses (`line`, `mood`, `animation`, `intent`) with validation.
+3. Map chat intent to richer runtime actions and animation sequences.
+4. Expand animation polish, transitions, and avatar behaviors.
+5. Add deeper coverage for LLM parsing, endpoint validation, and intent mapping.
 
 ## Local Development
 
 ### Prerequisites
 
 - Node.js 20+
-- Rust toolchain (`rustup`)
-- Tauri prerequisites for your OS
+- Rust toolchain via `rustup`
+- Tauri OS prerequisites
 
 ### Run
 
@@ -79,15 +74,11 @@ npm run tauri dev
 
 Optional LLM configuration:
 
-- `TOKKI_LLM_ENDPOINT`: LLM HTTP endpoint used by the `request_llm_reply` Tauri command.
-  Only standard OpenAI-compatible endpoint shapes are allowed:
-  - `/v1/responses`
-  - `/v1/chat/completions`
-  - Azure OpenAI equivalents under `/openai/deployments/{deployment}/.../(responses|chat/completions)`
-- `TOKKI_LLM_MODEL`: Optional model name override (defaults to `gpt-4o-mini`).
-- `TOKKI_LLM_API_KEY`: Optional bearer token sent as `Authorization: Bearer <token>`.
-- If no endpoint is configured, `request_llm_reply` returns `llm not configured`.
-- If endpoint format is non-standard, `request_llm_reply` returns an error.
+- `TOKKI_LLM_ENDPOINT`: supported OpenAI-compatible or Azure OpenAI endpoint
+- `TOKKI_LLM_MODEL`: optional model override, default `gpt-4o-mini`
+- `TOKKI_LLM_API_KEY`: optional bearer token for authenticated endpoints
+
+If no LLM endpoint is configured, Tokki falls back to local canned replies.
 
 ### Validate
 
@@ -103,3 +94,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ```bash
 npm run tauri build
 ```
+
+## License
+
+This repository is available under the MIT License. See `LICENSE`.
