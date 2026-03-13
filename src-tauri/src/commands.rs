@@ -13,15 +13,16 @@ use crate::{
     engine::models::{BehaviorTickPayload, TokkiState, TransitionReason, UserEvent},
     events::emit_behavior_tick,
     runtime::SharedRuntime,
+    settings::{SettingsStore, TokkiSettings},
 };
 
 const LLM_NOT_CONFIGURED: &str = "llm not configured";
-const INVALID_LLM_ENDPOINT: &str =
+pub(crate) const INVALID_LLM_ENDPOINT: &str =
     "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
 const INSECURE_LLM_ENDPOINT: &str =
     "llm endpoint must use https (http is only allowed for localhost)";
 const MAX_LLM_ENDPOINT_LEN: usize = 2_048;
-const MAX_LLM_MODEL_LEN: usize = 128;
+pub(crate) const MAX_LLM_MODEL_LEN: usize = 128;
 const MAX_LLM_PROMPT_LEN: usize = 16_384;
 const MAX_LLM_RESPONSE_LEN_BYTES: u64 = 1_048_576;
 const LLM_CLIENT_TIMEOUT_SECS: u64 = 30;
@@ -41,7 +42,7 @@ fn now_millis() -> u64 {
     }
 }
 
-fn sanitize_non_empty(value: Option<&str>) -> Option<String> {
+pub(crate) fn sanitize_non_empty(value: Option<&str>) -> Option<String> {
     value
         .map(str::trim)
         .filter(|value| !value.is_empty())
@@ -52,12 +53,21 @@ fn env_non_empty(key: &str) -> Option<String> {
     sanitize_non_empty(std::env::var(key).ok().as_deref())
 }
 
-fn resolve_llm_endpoint(override_endpoint: Option<&str>) -> Option<String> {
-    sanitize_non_empty(override_endpoint).or_else(|| env_non_empty("TOKKI_LLM_ENDPOINT"))
+fn resolve_llm_endpoint(
+    override_endpoint: Option<&str>,
+    saved_endpoint: Option<&str>,
+) -> Option<String> {
+    sanitize_non_empty(override_endpoint)
+        .or_else(|| sanitize_non_empty(saved_endpoint))
+        .or_else(|| env_non_empty("TOKKI_LLM_ENDPOINT"))
 }
 
-fn resolve_llm_model(override_model: Option<&str>) -> Result<String, String> {
+fn resolve_llm_model(
+    override_model: Option<&str>,
+    saved_model: Option<&str>,
+) -> Result<String, String> {
     let model = sanitize_non_empty(override_model)
+        .or_else(|| sanitize_non_empty(saved_model))
         .or_else(|| env_non_empty("TOKKI_LLM_MODEL"))
         .unwrap_or_else(|| String::from(DEFAULT_LLM_MODEL));
 
@@ -103,7 +113,7 @@ fn is_loopback_host(host: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn validate_llm_endpoint(endpoint: &str) -> Result<Url, String> {
+pub(crate) fn validate_llm_endpoint(endpoint: &str) -> Result<Url, String> {
     if endpoint.len() > MAX_LLM_ENDPOINT_LEN {
         return Err(format!(
             "llm endpoint too long (max {MAX_LLM_ENDPOINT_LEN} bytes)"
@@ -386,17 +396,36 @@ pub fn advance_tick(
     Ok(tick)
 }
 
-#[tauri::command]
-pub async fn request_llm_reply(request: LlmInteractionRequest) -> Result<String, String> {
-    let endpoint = match resolve_llm_endpoint(request.endpoint.as_deref()) {
+async fn request_llm_reply_with_settings(
+    request: LlmInteractionRequest,
+    settings: Option<&TokkiSettings>,
+) -> Result<String, String> {
+    let endpoint = match resolve_llm_endpoint(
+        request.endpoint.as_deref(),
+        settings.and_then(|value| value.llm.endpoint.as_deref()),
+    ) {
         Some(endpoint) => endpoint,
         None => return Ok(String::from(LLM_NOT_CONFIGURED)),
     };
     let endpoint = validate_llm_endpoint(&endpoint)?;
     let prompt = validate_prompt(&request.prompt)?;
-    let model = resolve_llm_model(request.model.as_deref())?;
-    let api_key = env_non_empty("TOKKI_LLM_API_KEY");
+    let model = resolve_llm_model(
+        request.model.as_deref(),
+        settings.and_then(|value| value.llm.model.as_deref()),
+    )?;
+    let api_key = settings
+        .and_then(|value| sanitize_non_empty(value.llm.api_key.as_deref()))
+        .or_else(|| env_non_empty("TOKKI_LLM_API_KEY"));
     call_llm_endpoint(&endpoint, &prompt, &model, api_key.as_deref()).await
+}
+
+#[tauri::command]
+pub async fn request_llm_reply(
+    request: LlmInteractionRequest,
+    settings_store: State<'_, SettingsStore>,
+) -> Result<String, String> {
+    let settings = settings_store.snapshot()?;
+    request_llm_reply_with_settings(request, Some(&settings)).await
 }
 
 #[cfg(test)]
@@ -405,6 +434,7 @@ mod tests {
     use crate::{
         engine::models::UserEventType,
         runtime::{RuntimeState, SharedRuntime},
+        settings::{LlmSettings, TokkiSettings},
     };
     use std::{
         env,
@@ -515,11 +545,14 @@ mod tests {
         let existing_endpoint = env::var("TOKKI_LLM_ENDPOINT").ok();
         env::remove_var("TOKKI_LLM_ENDPOINT");
 
-        let response = run_async(request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("hello"),
-            endpoint: None,
-            model: None,
-        }))
+        let response = run_async(request_llm_reply_with_settings(
+            LlmInteractionRequest {
+                prompt: String::from("hello"),
+                endpoint: None,
+                model: None,
+            },
+            None,
+        ))
         .expect("request should not fail");
 
         if let Some(value) = existing_endpoint {
@@ -530,14 +563,41 @@ mod tests {
     }
 
     #[test]
+    fn request_llm_reply_uses_saved_endpoint_and_model() {
+        let settings = TokkiSettings {
+            llm: LlmSettings {
+                endpoint: Some(String::from("http://localhost:11434/v1/chat/completions")),
+                model: Some(String::from("llama3.2")),
+                api_key: None,
+            },
+            ..TokkiSettings::default()
+        };
+
+        let response = run_async(request_llm_reply_with_settings(
+            LlmInteractionRequest {
+                prompt: String::from("   "),
+                endpoint: None,
+                model: None,
+            },
+            Some(&settings),
+        ));
+
+        let error = response.expect_err("empty prompt should fail before transport");
+        assert_eq!(error, "prompt must not be empty");
+    }
+
+    #[test]
     fn request_llm_reply_rejects_non_standard_endpoint() {
-        let response = run_async(request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("hello"),
-            endpoint: Some(String::from(
-                "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
-            )),
-            model: None,
-        }));
+        let response = run_async(request_llm_reply_with_settings(
+            LlmInteractionRequest {
+                prompt: String::from("hello"),
+                endpoint: Some(String::from(
+                    "https://defensiveapi.azurewebsites.net/codexinference/RunModel",
+                )),
+                model: None,
+            },
+            None,
+        ));
 
         let error = response.expect_err("non-standard endpoint should fail");
         assert_eq!(error, INVALID_LLM_ENDPOINT);
@@ -545,11 +605,14 @@ mod tests {
 
     #[test]
     fn request_llm_reply_rejects_empty_prompt() {
-        let response = run_async(request_llm_reply(LlmInteractionRequest {
-            prompt: String::from("   "),
-            endpoint: Some(String::from("https://api.openai.com/v1/responses")),
-            model: None,
-        }));
+        let response = run_async(request_llm_reply_with_settings(
+            LlmInteractionRequest {
+                prompt: String::from("   "),
+                endpoint: Some(String::from("https://api.openai.com/v1/responses")),
+                model: None,
+            },
+            None,
+        ));
 
         let error = response.expect_err("empty prompt should fail");
         assert_eq!(error, "prompt must not be empty");

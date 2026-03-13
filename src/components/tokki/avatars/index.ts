@@ -1,5 +1,4 @@
-export { getAllAvatars, getAvatar, registerAvatar } from "./registry";
-export type { AvatarEntry } from "./registry";
+export { getAllAvatars, getAvatar } from "./registry";
 
 // Import the retained avatars to trigger registration.
 import "./RabbitV1";

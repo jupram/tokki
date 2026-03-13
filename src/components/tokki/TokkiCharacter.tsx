@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { useShallow } from "zustand/react/shallow";
 import { mapActionToView } from "../../animation/mapActionToView";
 import {
+  getSettings,
   getCurrentState,
   handleUserInteraction,
   sendChatMessage,
   setChatPanelOpen,
+  subscribeSettingsChanged,
   startBehaviorLoop,
   startWindowDrag,
   stopBehaviorLoop,
@@ -95,6 +97,7 @@ export function TokkiCharacter(): JSX.Element {
 
   const {
     applyTick,
+    setAvatarId,
     setState,
     setConnected,
     setCurrentReply,
@@ -103,6 +106,7 @@ export function TokkiCharacter(): JSX.Element {
   } = useTokkiStore(
     useShallow((store) => ({
       applyTick: store.applyTick,
+      setAvatarId: store.setAvatarId,
       setState: store.setState,
       setConnected: store.setConnected,
       setCurrentReply: store.setCurrentReply,
@@ -120,6 +124,29 @@ export function TokkiCharacter(): JSX.Element {
   const [isAvatarHovered, setIsAvatarHovered] = useState(false);
   const [showHoverSparkles, setShowHoverSparkles] = useState(false);
   const chatLayoutOpen = chatOpen || chatPanelVisible;
+
+  useEffect(() => {
+    let mounted = true;
+    let teardown: (() => void) | undefined;
+
+    (async () => {
+      const settings = await getSettings();
+      if (mounted) {
+        setAvatarId(settings.preferences.avatarId ?? "rabbit_v1");
+      }
+
+      teardown = await subscribeSettingsChanged((nextSettings) => {
+        setAvatarId(nextSettings.preferences.avatarId ?? "rabbit_v1");
+      });
+    })().catch((error: unknown) => {
+      console.error("Tokki settings init failed", error);
+    });
+
+    return () => {
+      mounted = false;
+      teardown?.();
+    };
+  }, [setAvatarId]);
 
   useEffect(() => {
     let mounted = true;
