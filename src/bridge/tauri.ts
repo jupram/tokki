@@ -6,10 +6,8 @@ import {
   type AvatarId,
   type BehaviorAction,
   type BehaviorTickPayload,
-  type ChatMessage,
   type ChatResponse,
   type LlmResponse,
-  type SessionMemory,
   type TokkiState,
   type TransitionReason,
   type UserEvent
@@ -27,14 +25,20 @@ export interface LlmRequestOptions {
   model?: string;
 }
 
+interface WindowContentSize {
+  width: number;
+  height: number;
+}
+
 const fallbackListeners = new Set<TickHandler>();
 let fallbackLoop: ReturnType<typeof setInterval> | null = null;
 let fallbackState: TokkiState = createInitialTokkiState();
 let fallbackSeed = 1337;
-let fallbackChatHistory: ChatMessage[] = [];
+let lastRequestedWindowSize: WindowContentSize | null = null;
 
 const COLLAPSED_WINDOW_SIZE = { width: 180, height: 180 };
-const EXPANDED_WINDOW_SIZE = { width: 320, height: 290 };
+const MIN_EXPANDED_WINDOW_SIZE = { width: 320, height: 320 };
+const WINDOW_CONTENT_PADDING = { width: 24, height: 24 };
 
 function isTauriRuntime(): boolean {
   if (typeof window === "undefined") {
@@ -230,22 +234,9 @@ function toLlmResponse(line: string): LlmResponse {
 }
 
 async function sendFallbackChatMessage(message: string): Promise<ChatResponse> {
-  const now = Date.now();
-  fallbackChatHistory.push({
-    role: "user",
-    content: message,
-    timestamp: now
-  });
-
   await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
 
   const reply = fallbackChatReply(message);
-  fallbackChatHistory.push({
-    role: "assistant",
-    content: reply.line,
-    timestamp: Date.now()
-  });
-
   const tick = emitFallback("manual");
   return { reply, tick };
 }
@@ -322,14 +313,55 @@ export async function startWindowDrag(): Promise<void> {
   await getCurrentWindow().startDragging();
 }
 
+function normalizeWindowSize(target: WindowContentSize): WindowContentSize {
+  return {
+    width: Math.max(1, Math.ceil(target.width)),
+    height: Math.max(1, Math.ceil(target.height))
+  };
+}
+
+async function applyWindowSize(target: WindowContentSize): Promise<void> {
+  const normalized = normalizeWindowSize(target);
+  if (
+    lastRequestedWindowSize &&
+    lastRequestedWindowSize.width === normalized.width &&
+    lastRequestedWindowSize.height === normalized.height
+  ) {
+    return;
+  }
+
+  await getCurrentWindow().setSize(new LogicalSize(normalized.width, normalized.height));
+  lastRequestedWindowSize = normalized;
+}
+
 export async function setChatPanelOpen(open: boolean): Promise<void> {
   if (!isTauriRuntime()) {
     return;
   }
 
-  const target = open ? EXPANDED_WINDOW_SIZE : COLLAPSED_WINDOW_SIZE;
   try {
-    await getCurrentWindow().setSize(new LogicalSize(target.width, target.height));
+    await applyWindowSize(open ? MIN_EXPANDED_WINDOW_SIZE : COLLAPSED_WINDOW_SIZE);
+  } catch {
+    return;
+  }
+}
+
+export async function syncWindowToContent(
+  contentSize: WindowContentSize,
+  options: { chatOpen: boolean }
+): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  const minSize = options.chatOpen ? MIN_EXPANDED_WINDOW_SIZE : COLLAPSED_WINDOW_SIZE;
+  const target = {
+    width: Math.max(minSize.width, contentSize.width + WINDOW_CONTENT_PADDING.width),
+    height: Math.max(minSize.height, contentSize.height + WINDOW_CONTENT_PADDING.height)
+  };
+
+  try {
+    await applyWindowSize(target);
   } catch {
     return;
   }
@@ -370,34 +402,13 @@ export async function sendChatMessage(message: string): Promise<ChatResponse> {
     return sendFallbackChatMessage(message);
   }
 
-  const now = Date.now();
   const reply = toLlmResponse(llmText);
-  fallbackChatHistory.push({ role: "user", content: message, timestamp: now });
-  fallbackChatHistory.push({
-    role: "assistant",
-    content: reply.line,
-    timestamp: Date.now()
-  });
   const tick = emitFallback("manual");
   return { reply, tick };
 }
 
-export async function getChatHistory(): Promise<ChatMessage[]> {
-  return fallbackChatHistory;
-}
-
 export async function setAvatar(avatarId: AvatarId): Promise<void> {
   void avatarId;
-}
-
-export async function getSessionMemory(): Promise<SessionMemory> {
-  return {
-    user_name: null,
-    topics: [],
-    message_count: 0,
-    greet_count: 0,
-    mood_trend: ""
-  };
 }
 
 export async function requestLlmReply(

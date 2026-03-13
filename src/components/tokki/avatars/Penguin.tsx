@@ -1,4 +1,4 @@
-import { registerAvatar } from "./index";
+import { registerAvatar } from "./registry";
 
 function PenguinV1Asset(): JSX.Element {
   return (
@@ -11,19 +11,18 @@ function PenguinV1Asset(): JSX.Element {
       <defs>
         {/* Body gradient — deep navy */}
         <radialGradient id="pg-body" cx="50%" cy="38%" r="55%">
-          <stop offset="0%" stopColor="#243558" />
-          <stop offset="100%" stopColor="#1A2844" />
+          <stop offset="0%" stopColor="#9AA4AF" />
+          <stop offset="100%" stopColor="#707A86" />
+        </radialGradient>
+        <radialGradient id="pg-head" cx="50%" cy="40%" r="55%">
+          <stop offset="0%" stopColor="#B5BEC8" />
+          <stop offset="100%" stopColor="#8B95A0" />
         </radialGradient>
         {/* Belly — clean white with ice tint */}
         <radialGradient id="pg-belly" cx="50%" cy="45%" r="50%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="80%" stopColor="#EAF2FA" />
-          <stop offset="100%" stopColor="#D8E8F6" />
-        </radialGradient>
-        {/* Head gradient */}
-        <radialGradient id="pg-head" cx="50%" cy="40%" r="55%">
-          <stop offset="0%" stopColor="#263A5E" />
-          <stop offset="100%" stopColor="#1A2844" />
+          <stop offset="0%" stopColor="#E7ECF1" />
+          <stop offset="80%" stopColor="#D5DCE4" />
+          <stop offset="100%" stopColor="#C4CDD7" />
         </radialGradient>
         {/* Cheek blush */}
         <radialGradient id="pg-cheek" cx="50%" cy="50%" r="50%">
@@ -58,8 +57,8 @@ function PenguinV1Asset(): JSX.Element {
         </radialGradient>
         {/* Ice-blue highlight for body sheen */}
         <radialGradient id="pg-sheen" cx="40%" cy="30%" r="50%">
-          <stop offset="0%" stopColor="#A8C8E8" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#A8C8E8" stopOpacity="0" />
+          <stop offset="0%" stopColor="#D7E0E8" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#D7E0E8" stopOpacity="0" />
         </radialGradient>
       </defs>
 
@@ -100,7 +99,7 @@ function PenguinV1Asset(): JSX.Element {
       <path
         d="M72 106 L76 102 L80 106 L84 102 L88 106"
         fill="none"
-        stroke="#A8C8E8"
+        stroke="#D7E0E8"
         strokeWidth="1"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -109,7 +108,7 @@ function PenguinV1Asset(): JSX.Element {
       <path
         d="M74 112 L77 109 L80 112 L83 109 L86 112"
         fill="none"
-        stroke="#A8C8E8"
+        stroke="#D7E0E8"
         strokeWidth="0.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -141,15 +140,13 @@ function PenguinV1Asset(): JSX.Element {
         cy="64"
         r="30"
         fill="url(#pg-head)"
-        stroke="rgba(10,18,36,0.28)"
+        stroke="rgba(32,40,52,0.2)"
         strokeWidth="1.8"
+        style={{ fill: "url(#pg-head)", stroke: "rgba(32,40,52,0.2)" }}
       />
 
       {/* Head highlight */}
-      <ellipse cx="72" cy="52" rx="12" ry="8" fill="#A8C8E8" opacity="0.12" />
-
-      {/* White face patch — Scandinavian folk style, clean oval */}
-      <ellipse cx="80" cy="68" rx="18" ry="13" fill="#FFFFFF" opacity="0.92" />
+      <ellipse cx="72" cy="52" rx="12" ry="8" fill="#DCE4EC" opacity="0.16" />
 
       {/* === Eyes — cheerful and round === */}
       <g className="tokki-eye tokki-eye--left">
@@ -237,25 +234,25 @@ function PenguinV1Asset(): JSX.Element {
 
       {/* === Folk art decorative details on body — tiny snowflake/star motifs === */}
       {/* Left side dot cluster */}
-      <circle cx="56" cy="105" r="1" fill="#A8C8E8" opacity="0.3" />
-      <circle cx="53" cy="108" r="0.7" fill="#A8C8E8" opacity="0.25" />
-      <circle cx="58" cy="110" r="0.7" fill="#A8C8E8" opacity="0.25" />
+      <circle cx="56" cy="105" r="1" fill="#D7E0E8" opacity="0.3" />
+      <circle cx="53" cy="108" r="0.7" fill="#D7E0E8" opacity="0.25" />
+      <circle cx="58" cy="110" r="0.7" fill="#D7E0E8" opacity="0.25" />
       {/* Right side dot cluster */}
-      <circle cx="104" cy="105" r="1" fill="#A8C8E8" opacity="0.3" />
-      <circle cx="107" cy="108" r="0.7" fill="#A8C8E8" opacity="0.25" />
-      <circle cx="102" cy="110" r="0.7" fill="#A8C8E8" opacity="0.25" />
+      <circle cx="104" cy="105" r="1" fill="#D7E0E8" opacity="0.3" />
+      <circle cx="107" cy="108" r="0.7" fill="#D7E0E8" opacity="0.25" />
+      <circle cx="102" cy="110" r="0.7" fill="#D7E0E8" opacity="0.25" />
 
       {/* Small diamond motif on head — folk pattern */}
       <path
         d="M80 44 L82 47 L80 50 L78 47 Z"
         fill="none"
-        stroke="#A8C8E8"
+        stroke="#D7E0E8"
         strokeWidth="0.8"
         opacity="0.3"
       />
 
       {/* === Tail — small rounded bump at back === */}
-      <ellipse className="tokki-tail" cx="80" cy="140" rx="6" ry="4" fill="#1A2844" stroke="rgba(10,18,36,0.2)" strokeWidth="1" />
+      <ellipse className="tokki-tail" cx="80" cy="140" rx="6" ry="4" fill="#707A86" stroke="rgba(10,18,36,0.2)" strokeWidth="1" />
 
       {/* === Zzz / Snore elements === */}
       <circle className="tokki-snore tokki-snore--a" cx="118" cy="54" r="4.2" />

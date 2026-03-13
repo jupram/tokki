@@ -15,21 +15,23 @@ export function AvatarPicker(): JSX.Element {
   const avatars = getAllAvatars();
 
   return (
-    <div className="avatar-picker" role="radiogroup" aria-label="Choose avatar">
-      {avatars.map((a) => (
-        <button
-          key={a.id}
-          type="button"
-          className={`avatar-picker__btn ${avatarId === a.id ? "avatar-picker__btn--active" : ""}`}
-          onClick={() => pick(a.id)}
-          role="radio"
-          aria-checked={avatarId === a.id}
-          aria-label={a.label}
-          title={a.label}
-        >
-          <span className="avatar-picker__emoji">{a.emoji}</span>
-        </button>
-      ))}
+    <div className="avatar-picker-wrap">
+      <div className="avatar-picker" role="radiogroup" aria-label="Choose avatar">
+        {avatars.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            className={`avatar-picker__btn ${avatarId === a.id ? "avatar-picker__btn--active" : ""}`}
+            onClick={() => pick(a.id)}
+            role="radio"
+            aria-checked={avatarId === a.id}
+            aria-label={a.label}
+            title={a.label}
+          >
+            <span className="avatar-picker__emoji">{a.emoji}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 Tokki is a compact desktop micro-companion built with Tauri + React. It runs an autonomous behavior loop, reacts to user input, and exposes a typed runtime bridge between Rust and the UI.
 
-## Current Status (March 5, 2026)
+## Current Status (March 13, 2026)
 
 Core runtime is implemented and working end-to-end, and chat now uses the Tauri `request_llm_reply` path when an LLM endpoint is configured.
 
@@ -52,7 +52,7 @@ Core runtime is implemented and working end-to-end, and chat now uses the Tauri 
 - No intent planner that maps language to richer behavior sequences.
 - No streaming/tool-calling orchestration for LLM responses.
 
-## Next Phase (Phase 2)
+## Next Phase
 
 Focus: conversational intelligence and persistent behavior context.
 

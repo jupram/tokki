@@ -1,4 +1,4 @@
-import { registerAvatar } from "./index";
+import { registerAvatar } from "./registry";
 
 function CelestialOwlV1Asset(): JSX.Element {
   return (

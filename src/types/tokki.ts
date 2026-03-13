@@ -37,12 +37,6 @@ export interface BehaviorTickPayload {
   reason: TransitionReason;
 }
 
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: number;
-}
-
 export interface LlmResponse {
   line: string;
   mood: Mood;
@@ -56,25 +50,11 @@ export interface ChatResponse {
 }
 
 export type AvatarId =
-  | "rabbit_v1" | "rabbit_v2"
-  | "cat_v1" | "cat_v2"
+  | "rabbit_v1"
+  | "cat_v1"
   | "dog_v1"
-  | "fox_v1" | "fox_v2"
-  | "dragon_v1"
-  | "phoenix_v1"
-  | "kitsune_v1"
-  | "serpent_v1"
   | "penguin_v1"
-  | "turtle_v1"
   | "owl_v1";
-
-export interface SessionMemory {
-  user_name: string | null;
-  topics: string[];
-  message_count: number;
-  greet_count: number;
-  mood_trend: string;
-}
 
 export function createInitialTokkiState(): TokkiState {
   return {

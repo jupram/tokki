@@ -1,4 +1,4 @@
-import { registerAvatar } from "./index";
+import { registerAvatar } from "./registry";
 
 function DogV1Asset(): JSX.Element {
   return (
@@ -60,40 +60,43 @@ function DogV1Asset(): JSX.Element {
       {/* Ground shadow */}
       <ellipse className="tokki-shadow" cx="80" cy="138" rx="40" ry="8" />
 
-      {/* Stocky body — wide and round */}
+      {/* Puppy body — smaller and rounder */}
       <ellipse
         className="tokki-body"
         cx="80"
-        cy="108"
-        rx="30"
-        ry="24"
+        cy="112"
+        rx="28"
+        ry="22"
         fill="url(#dg-body)"
         stroke="#3A2218"
         strokeWidth="2.5"
       />
       {/* Belly patch */}
-      <ellipse cx="80" cy="113" rx="18" ry="14" fill="url(#dg-belly)" opacity="0.8" />
+      <ellipse cx="80" cy="116" rx="17" ry="13" fill="url(#dg-belly)" opacity="0.82" />
 
-      {/* Tail — thick, upright, wagging-style curve */}
+      {/* Puppy tail — fluffy and coat-colored */}
       <path
         className="tokki-tail"
-        d="M110 106 Q130 94 132 72 Q133 58 126 48 Q122 42 124 36"
-        fill="none"
-        stroke="url(#dg-body)"
-        strokeWidth="12"
-        strokeLinecap="round"
-      />
-      {/* Tail outline */}
-      <path
-        d="M110 106 Q130 94 132 72 Q133 58 126 48 Q122 42 124 36"
-        fill="none"
+        d="M106 114
+           Q118 110 123 100
+           Q127 91 122 83
+           Q117 76 109 79
+           Q112 87 106 93
+           Q100 99 96 103
+           Q99 111 106 114 Z"
+        fill="url(#dg-body)"
         stroke="#3A2218"
-        strokeWidth="2.5"
-        strokeLinecap="round"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
       />
-      {/* Tail tip highlight */}
-      <circle cx="124" cy="37" r="5" fill="#E0974F" stroke="#3A2218" strokeWidth="2" />
-      <circle cx="123" cy="36" r="2" fill="#F5C48A" opacity="0.6" />
+      <path
+        d="M110 82 Q118 89 115 98"
+        fill="none"
+        stroke="#F3BE7F"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity="0.55"
+      />
 
       {/* Floppy ears — left (behind head) */}
       <g className="tokki-ear tokki-ear--left">
@@ -130,66 +133,66 @@ function DogV1Asset(): JSX.Element {
         />
       </g>
 
-      {/* Big round head */}
+      {/* Big puppy head */}
       <circle
         className="tokki-head"
         cx="80"
-        cy="72"
-        r="40"
+        cy="70"
+        r="42"
         fill="url(#dg-body)"
         stroke="#3A2218"
         strokeWidth="2.5"
       />
 
-      {/* Muzzle/snout — lighter area lower-center of face */}
-      <ellipse cx="80" cy="82" rx="20" ry="16" fill="url(#dg-muzzle)" opacity="0.9" />
+      {/* Muzzle/snout — smaller and softer */}
+      <ellipse cx="80" cy="84" rx="19" ry="15" fill="url(#dg-muzzle)" opacity="0.94" />
 
-      {/* Brow ridges — bold retro style */}
-      <path d="M57 58 Q65 53 73 57" fill="none" stroke="#3A2218" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M87 57 Q95 53 103 58" fill="none" stroke="#3A2218" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Soft brow arcs */}
+      <path d="M58 58 Q65 54.5 72 57.5" fill="none" stroke="#3A2218" strokeWidth="1.8" strokeLinecap="round" opacity="0.45" />
+      <path d="M88 57.5 Q95 54.5 102 58" fill="none" stroke="#3A2218" strokeWidth="1.8" strokeLinecap="round" opacity="0.45" />
 
-      {/* Wide happy eyes — left */}
+      {/* Big glossy puppy eyes — left */}
       <g className="tokki-eye tokki-eye--left">
-        <ellipse cx="66" cy="68" rx="7" ry="7" fill="#FFFDF8" />
-        <ellipse cx="66" cy="68" rx="7" ry="7" fill="none" stroke="#3A2218" strokeWidth="2" />
-        <ellipse cx="66" cy="68" rx="4.5" ry="4.5" fill="#4A2A18" />
-        <ellipse cx="64" cy="66" rx="2.2" ry="2.2" fill="#fff" opacity="0.9" />
-        <ellipse cx="68" cy="70" rx="1" ry="1" fill="#fff" opacity="0.5" />
+        <ellipse cx="66" cy="70" rx="8.4" ry="9.2" fill="#FFFDF8" />
+        <ellipse cx="66" cy="70" rx="8.4" ry="9.2" fill="none" stroke="#3A2218" strokeWidth="1.8" />
+        <ellipse cx="66" cy="71" rx="5.4" ry="6.2" fill="#352016" />
+        <ellipse cx="63.8" cy="67.8" rx="2.6" ry="3" fill="#fff" opacity="0.95" />
+        <ellipse cx="67.8" cy="73.5" rx="1.3" ry="1.5" fill="#fff" opacity="0.58" />
       </g>
-      {/* Wide happy eyes — right */}
+      {/* Big glossy puppy eyes — right */}
       <g className="tokki-eye tokki-eye--right">
-        <ellipse cx="94" cy="68" rx="7" ry="7" fill="#FFFDF8" />
-        <ellipse cx="94" cy="68" rx="7" ry="7" fill="none" stroke="#3A2218" strokeWidth="2" />
-        <ellipse cx="94" cy="68" rx="4.5" ry="4.5" fill="#4A2A18" />
-        <ellipse cx="92" cy="66" rx="2.2" ry="2.2" fill="#fff" opacity="0.9" />
-        <ellipse cx="96" cy="70" rx="1" ry="1" fill="#fff" opacity="0.5" />
+        <ellipse cx="94" cy="70" rx="8.4" ry="9.2" fill="#FFFDF8" />
+        <ellipse cx="94" cy="70" rx="8.4" ry="9.2" fill="none" stroke="#3A2218" strokeWidth="1.8" />
+        <ellipse cx="94" cy="71" rx="5.4" ry="6.2" fill="#352016" />
+        <ellipse cx="91.8" cy="67.8" rx="2.6" ry="3" fill="#fff" opacity="0.95" />
+        <ellipse cx="95.8" cy="73.5" rx="1.3" ry="1.5" fill="#fff" opacity="0.58" />
       </g>
 
       {/* Rosy cheeks */}
-      <ellipse className="tokki-cheek tokki-cheek--left" cx="52" cy="80" rx="8" ry="5" fill="url(#dg-cheek)" />
-      <ellipse className="tokki-cheek tokki-cheek--right" cx="108" cy="80" rx="8" ry="5" fill="url(#dg-cheek)" />
+      <ellipse className="tokki-cheek tokki-cheek--left" cx="53" cy="83" rx="8.5" ry="5.4" fill="url(#dg-cheek)" />
+      <ellipse className="tokki-cheek tokki-cheek--right" cx="107" cy="83" rx="8.5" ry="5.4" fill="url(#dg-cheek)" />
 
       {/* Big wet nose — prominent */}
-      <ellipse className="tokki-nose" cx="80" cy="80" rx="6" ry="4.5" fill="url(#dg-nose)" stroke="#1A1210" strokeWidth="1" />
+      <ellipse className="tokki-nose" cx="80" cy="82" rx="5.8" ry="4.3" fill="url(#dg-nose)" stroke="#1A1210" strokeWidth="1" />
       {/* Nose highlight — glossy wet look */}
       <ellipse cx="78" cy="78.5" rx="2" ry="1.3" fill="#6A5A50" opacity="0.5" />
       <ellipse cx="77.5" cy="78" rx="1.2" ry="0.8" fill="#fff" opacity="0.55" />
       {/* Nostrils */}
-      <ellipse cx="77.5" cy="81" rx="1.2" ry="0.8" fill="#0A0808" opacity="0.6" />
-      <ellipse cx="82.5" cy="81" rx="1.2" ry="0.8" fill="#0A0808" opacity="0.6" />
+      <ellipse cx="77.5" cy="83" rx="1.2" ry="0.8" fill="#0A0808" opacity="0.6" />
+      <ellipse cx="82.5" cy="83" rx="1.2" ry="0.8" fill="#0A0808" opacity="0.6" />
 
-      {/* Wide smile */}
+      {/* Soft puppy smile */}
       <path
         className="tokki-mouth"
-        d="M68 87 Q74 94 80 94 Q86 94 92 87"
+        d="M69 89 Q74 95 80 95 Q86 95 91 89"
         fill="none"
         stroke="#3A2218"
-        strokeWidth="2.5"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
       {/* Tongue — hanging out the center */}
-      <ellipse cx="80" cy="95" rx="5" ry="4.5" fill="url(#dg-tongue)" stroke="#3A2218" strokeWidth="1.8" />
-      <ellipse cx="80" cy="94" rx="2.5" ry="2" fill="#F8A0A8" opacity="0.5" />
+      <ellipse cx="80" cy="96" rx="4.6" ry="4.2" fill="url(#dg-tongue)" stroke="#3A2218" strokeWidth="1.6" />
+      <ellipse cx="80" cy="95.2" rx="2.3" ry="1.9" fill="#F8A0A8" opacity="0.5" />
       {/* Tongue center line */}
       <line x1="80" y1="91.5" x2="80" y2="98" stroke="#C84858" strokeWidth="0.8" opacity="0.4" strokeLinecap="round" />
 
@@ -201,8 +204,8 @@ function DogV1Asset(): JSX.Element {
       <text className="tokki-zzz tokki-zzz--c" x="134" y="30" fontSize="16" fontWeight="bold" fill="#8b7e74">Z</text>
 
       {/* Front paws — stocky, wide */}
-      <ellipse className="tokki-paw tokki-paw--left" cx="62" cy="108" rx="12" ry="9" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2.5" />
-      <ellipse className="tokki-paw tokki-paw--right" cx="98" cy="108" rx="12" ry="9" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2.5" />
+      <ellipse className="tokki-paw tokki-paw--left" cx="62" cy="111" rx="11.5" ry="8.8" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2.5" />
+      <ellipse className="tokki-paw tokki-paw--right" cx="98" cy="111" rx="11.5" ry="8.8" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2.5" />
       {/* Paw toe-beans — left */}
       <ellipse cx="58" cy="110" rx="2.5" ry="2" fill="#E0B0A0" opacity="0.55" />
       <ellipse cx="62" cy="111" rx="2.5" ry="2" fill="#E0B0A0" opacity="0.55" />
@@ -215,8 +218,8 @@ function DogV1Asset(): JSX.Element {
       <ellipse cx="98" cy="114" rx="3" ry="2.2" fill="#E0B0A0" opacity="0.4" />
 
       {/* Back feet / hind paws */}
-      <ellipse cx="66" cy="130" rx="12" ry="6" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2" />
-      <ellipse cx="94" cy="130" rx="12" ry="6" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2" />
+      <ellipse cx="66" cy="132" rx="11.5" ry="5.8" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2" />
+      <ellipse cx="94" cy="132" rx="11.5" ry="5.8" fill="url(#dg-paw)" stroke="#3A2218" strokeWidth="2" />
       {/* Foot toe lines — left */}
       <line x1="60" y1="128" x2="60" y2="133" stroke="#C8A888" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
       <line x1="66" y1="127" x2="66" y2="134" stroke="#C8A888" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
@@ -227,7 +230,7 @@ function DogV1Asset(): JSX.Element {
       <line x1="100" y1="128" x2="100" y2="133" stroke="#C8A888" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
 
       {/* Forehead spot — small warm marking */}
-      <ellipse cx="80" cy="55" rx="5" ry="3.5" fill="#C87838" opacity="0.35" />
+      <ellipse cx="80" cy="55" rx="4.5" ry="3.2" fill="#C87838" opacity="0.28" />
 
       {/* Eyebrow dots — retro cartoon detail */}
       <circle cx="66" cy="57" r="1.2" fill="#3A2218" opacity="0.2" />

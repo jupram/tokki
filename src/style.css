@@ -786,29 +786,6 @@ body {
   animation: cat-tail-sway 3.2s var(--ease-standard) infinite;
 }
 
-/* Fox avatar overrides */
-
-.tokki-asset--fox .tokki-ear-shell,
-.tokki-asset--fox .tokki-head {
-  fill: var(--tokki-shell);
-  stroke: rgba(58, 30, 18, 0.22);
-  stroke-width: 2;
-}
-
-.tokki-asset--fox .tokki-face-mask {
-  transition: opacity var(--motion-base) var(--ease-standard);
-}
-
-.tokki-asset--fox .tokki-tail {
-  transform-origin: 108px 112px;
-  will-change: transform;
-  animation: fox-tail-wag 2.6s var(--ease-standard) infinite;
-}
-
-.tokki-asset--fox .tokki-tail-tip {
-  animation: tail-tip-glow 2.6s var(--ease-standard) infinite;
-}
-
 @keyframes cat-tail-sway {
   0% {
     transform: rotate(0deg);
@@ -821,39 +798,6 @@ body {
   }
   100% {
     transform: rotate(0deg);
-  }
-}
-
-@keyframes fox-tail-wag {
-  0% {
-    transform: rotate(0deg);
-  }
-  20% {
-    transform: rotate(11deg);
-  }
-  48% {
-    transform: rotate(-3deg);
-  }
-  72% {
-    transform: rotate(-9deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes tail-tip-glow {
-  0% {
-    opacity: 0.84;
-    filter: brightness(1);
-  }
-  50% {
-    opacity: 1;
-    filter: brightness(1.1);
-  }
-  100% {
-    opacity: 0.84;
-    filter: brightness(1);
   }
 }
 
@@ -870,16 +814,25 @@ body {
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
+.tokki-card:not(.tokki-card--chat-open) .tokki-stage {
+  transform: translateY(6px);
+}
+
 .tokki-card--chat-open .tokki-stage {
-  transform: translateY(-1px);
+  transform: translateY(12px);
+}
+
+.tokki-card--chat-open .tokki-hover-decor--stars {
+  top: -8px;
 }
 
 .chat-bubble {
   position: relative;
-  max-width: 260px;
+  width: 100%;
+  max-width: 100%;
   min-height: 32px;
   padding: 10px 14px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   background: rgba(255, 252, 245, 0.92);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -892,6 +845,7 @@ body {
   transform: translateY(6px) scale(0.965);
   will-change: transform, opacity;
   animation: none;
+  pointer-events: auto;
 }
 
 .chat-bubble--enter {
@@ -899,7 +853,7 @@ body {
 }
 
 .chat-bubble--exit {
-  animation: bubble-exit 280ms var(--ease-out) forwards;
+  animation: bubble-exit 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .chat-bubble__tail {
@@ -974,9 +928,13 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+  55% {
+    opacity: 0.52;
+    transform: translateY(-0.5px) scale(0.996);
+  }
   100% {
     opacity: 0;
-    transform: translateY(-4px) scale(0.975);
+    transform: translateY(-1px) scale(0.992);
   }
 }
 
@@ -998,11 +956,11 @@ body {
 .tokki-chat-panel {
   width: 100%;
   max-width: 280px;
-  margin-top: 6px;
+  margin-top: 12px;
   transform-origin: center top;
   will-change: transform, opacity;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .tokki-chat-panel--open {
@@ -1014,20 +972,22 @@ body {
   animation: panel-slide-out 220ms var(--ease-out) forwards;
 }
 
+.avatar-picker-wrap {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin-bottom: 6px;
+}
+
 .avatar-picker {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 4px;
-  margin-bottom: 6px;
-  max-width: 280px;
-  margin-left: auto;
-  margin-right: auto;
+  gap: 8px;
 }
 
 .avatar-picker__btn {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1.5px solid rgba(180, 150, 120, 0.2);
   background: rgba(255, 252, 245, 0.85);
@@ -1060,7 +1020,7 @@ body {
 }
 
 .avatar-picker__emoji {
-  font-size: 13px;
+  font-size: 17px;
   line-height: 1;
 }
 
@@ -1214,11 +1174,9 @@ body {
 
 @media (max-width: 220px), (max-height: 230px) {
   .tokki-card--chat-open .chat-bubble {
-    position: relative;
     width: max-content;
     max-width: 156px;
     min-height: 18px;
-    margin: 0 0 3px;
     padding: 4px 6px;
   }
 
@@ -1252,16 +1210,16 @@ body {
   }
 
   .tokki-card--chat-open .avatar-picker {
-    gap: 3px;
+    gap: 5px;
   }
 
   .tokki-card--chat-open .avatar-picker__btn {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 
   .tokki-card--chat-open .avatar-picker__emoji {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .tokki-card--chat-open .chat-input {
