@@ -3,6 +3,7 @@ name = "tokki"
 version = "0.1.0"
 description = "Tokki desktop character runtime"
 authors = ["tokki"]
+license = "MIT"
 edition = "2021"
 
 [lib]
