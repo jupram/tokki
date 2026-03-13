@@ -3,7 +3,6 @@ import {
   createInitialTokkiState,
   type AvatarId,
   type BehaviorTickPayload,
-  type ChatMessage,
   type LlmResponse,
   type TokkiState
 } from "../types/tokki";
@@ -12,7 +11,6 @@ interface TokkiStore {
   state: TokkiState;
   connected: boolean;
   avatarId: AvatarId;
-  chatMessages: ChatMessage[];
   currentReply: LlmResponse | null;
   isTyping: boolean;
   chatOpen: boolean;
@@ -20,7 +18,6 @@ interface TokkiStore {
   setState: (state: TokkiState) => void;
   applyTick: (tick: BehaviorTickPayload) => void;
   setAvatarId: (id: AvatarId) => void;
-  addChatMessage: (message: ChatMessage) => void;
   setCurrentReply: (reply: LlmResponse | null) => void;
   setIsTyping: (value: boolean) => void;
   setChatOpen: (value: boolean) => void;
@@ -30,7 +27,6 @@ export const useTokkiStore = create<TokkiStore>((set) => ({
   state: createInitialTokkiState(),
   connected: false,
   avatarId: "rabbit_v1",
-  chatMessages: [],
   currentReply: null,
   isTyping: false,
   chatOpen: false,
@@ -38,8 +34,6 @@ export const useTokkiStore = create<TokkiStore>((set) => ({
   setState: (state) => set({ state }),
   applyTick: (tick) => set({ state: tick.state }),
   setAvatarId: (id) => set({ avatarId: id }),
-  addChatMessage: (message) =>
-    set((prev) => ({ chatMessages: [...prev.chatMessages, message] })),
   setCurrentReply: (reply) => set({ currentReply: reply }),
   setIsTyping: (value) => set({ isTyping: value }),
   setChatOpen: (value) => set({ chatOpen: value }),

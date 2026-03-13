@@ -6,6 +6,9 @@ interface ChatBubbleProps {
   isTyping: boolean;
 }
 
+const CHAT_BUBBLE_VISIBLE_MS = 6500;
+const CHAT_BUBBLE_EXIT_MS = 620;
+
 export const ChatBubble = memo(function ChatBubble({
   reply,
   isTyping
@@ -38,8 +41,8 @@ export const ChatBubble = memo(function ChatBubble({
         timerRef.current = setTimeout(() => {
           setVisible(false);
           setFadeClass("");
-        }, 400);
-      }, 6000);
+        }, CHAT_BUBBLE_EXIT_MS);
+      }, CHAT_BUBBLE_VISIBLE_MS);
     }
 
     return () => {

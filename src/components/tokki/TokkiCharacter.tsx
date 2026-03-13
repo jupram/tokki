@@ -9,7 +9,8 @@ import {
   startBehaviorLoop,
   startWindowDrag,
   stopBehaviorLoop,
-  subscribeBehaviorTick
+  subscribeBehaviorTick,
+  syncWindowToContent
 } from "../../bridge/tauri";
 import { useTokkiStore } from "../../state/useTokkiStore";
 import type { LlmResponse, UserEvent } from "../../types/tokki";
@@ -17,8 +18,7 @@ import { AvatarPicker } from "./AvatarPicker";
 import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { TokkiAvatarAsset } from "./TokkiAvatarAsset";
-
-type HoverDecoration = "stars";
+import { FXLayer } from "./avatars/particles/FXLayer";
 
 function makeUserEvent(type: UserEvent["type"]): UserEvent {
   return {
@@ -29,7 +29,45 @@ function makeUserEvent(type: UserEvent["type"]): UserEvent {
 
 const DRAG_THRESHOLD = 4;
 const CHAT_PANEL_EXIT_MS = 220;
+const CHAT_IDLE_CLOSE_MS = 10_000;
 const HOVER_SPARKLE_DELAY_MS = 900;
+const WINDOW_MEASURE_SELECTORS = [
+  ".tokki-stage",
+  ".tokki-chat-panel",
+  ".chat-bubble",
+  ".tokki-hover-decor",
+  ".fx-layer"
+];
+
+function measureWindowContent(root: HTMLElement): { width: number; height: number } {
+  const bounds = root.getBoundingClientRect();
+  let left = bounds.left;
+  let top = bounds.top;
+  let right = bounds.right;
+  let bottom = bounds.bottom;
+
+  for (const selector of WINDOW_MEASURE_SELECTORS) {
+    const element = root.querySelector<HTMLElement>(selector);
+    if (!element) {
+      continue;
+    }
+
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+
+    left = Math.min(left, rect.left);
+    top = Math.min(top, rect.top);
+    right = Math.max(right, rect.right);
+    bottom = Math.max(bottom, rect.bottom);
+  }
+
+  return {
+    width: Math.ceil(right - left),
+    height: Math.ceil(bottom - top)
+  };
+}
 
 function HoverSparkles(): JSX.Element {
   return (
@@ -61,8 +99,7 @@ export function TokkiCharacter(): JSX.Element {
     setConnected,
     setCurrentReply,
     setIsTyping,
-    setChatOpen,
-    addChatMessage
+    setChatOpen
   } = useTokkiStore(
     useShallow((store) => ({
       applyTick: store.applyTick,
@@ -70,20 +107,19 @@ export function TokkiCharacter(): JSX.Element {
       setConnected: store.setConnected,
       setCurrentReply: store.setCurrentReply,
       setIsTyping: store.setIsTyping,
-      setChatOpen: store.setChatOpen,
-      addChatMessage: store.addChatMessage
+      setChatOpen: store.setChatOpen
     }))
   );
 
   const dragRef = useRef<{ startX: number; startY: number; dragging: boolean } | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverActiveRef = useRef(false);
   const [chatPanelVisible, setChatPanelVisible] = useState(chatOpen);
   const [chatPanelClosing, setChatPanelClosing] = useState(false);
   const [isAvatarHovered, setIsAvatarHovered] = useState(false);
   const [showHoverSparkles, setShowHoverSparkles] = useState(false);
+  const chatLayoutOpen = chatOpen || chatPanelVisible;
 
   useEffect(() => {
     let mounted = true;
@@ -118,6 +154,105 @@ export function TokkiCharacter(): JSX.Element {
   }, [chatOpen]);
 
   useEffect(() => {
+    const root = cardRef.current;
+    if (!root) {
+      return;
+    }
+
+    let frameId: number | null = null;
+    const resizeWindow = (): void => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        void syncWindowToContent(measureWindowContent(root), {
+          chatOpen: chatLayoutOpen
+        });
+      });
+    };
+
+    resizeWindow();
+
+    const observer = new ResizeObserver(() => {
+      resizeWindow();
+    });
+    const mutationObserver = new MutationObserver(() => {
+      resizeWindow();
+    });
+
+    observer.observe(root);
+    for (const selector of WINDOW_MEASURE_SELECTORS) {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (element) {
+        observer.observe(element);
+      }
+    }
+    mutationObserver.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["class", "style"]
+    });
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [avatarId, chatLayoutOpen, currentReply, isTyping, showHoverSparkles]);
+
+  useEffect(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+
+    if (!chatOpen || isTyping) {
+      return;
+    }
+
+    const resetIdleTimer = (): void => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+
+      idleTimerRef.current = setTimeout(() => {
+        setCurrentReply(null);
+        setChatOpen(false);
+        idleTimerRef.current = null;
+      }, CHAT_IDLE_CLOSE_MS);
+    };
+
+    const activityEvents: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "wheel",
+      "focusin",
+      "touchstart"
+    ];
+
+    resetIdleTimer();
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, resetIdleTimer, { passive: true });
+    });
+
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, resetIdleTimer);
+      });
+    };
+  }, [chatOpen, isTyping, setChatOpen, setCurrentReply]);
+
+  useEffect(() => {
     if (panelTimerRef.current) {
       clearTimeout(panelTimerRef.current);
       panelTimerRef.current = null;
@@ -144,11 +279,8 @@ export function TokkiCharacter(): JSX.Element {
       if (panelTimerRef.current) {
         clearTimeout(panelTimerRef.current);
       }
-      if (hoverDelayRef.current) {
-        clearTimeout(hoverDelayRef.current);
-      }
-      if (hoverClearRef.current) {
-        clearTimeout(hoverClearRef.current);
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
       }
     },
     []
@@ -218,9 +350,10 @@ export function TokkiCharacter(): JSX.Element {
 
   const onAvatarClick = useCallback((): void => {
     if (dragRef.current?.dragging) return;
+    setCurrentReply(null);
     setChatOpen(!chatOpen);
     void onInteract("click");
-  }, [chatOpen, onInteract, setChatOpen]);
+  }, [chatOpen, onInteract, setChatOpen, setCurrentReply]);
 
   const onAvatarMouseEnter = useCallback((): void => {
     setIsAvatarHovered(true);
@@ -235,17 +368,11 @@ export function TokkiCharacter(): JSX.Element {
   const onSendMessage = useCallback(
     async (message: string): Promise<void> => {
       setIsTyping(true);
-      addChatMessage({ role: "user", content: message, timestamp: Date.now() });
 
       try {
         const response = await sendChatMessage(message);
         applyTick(response.tick);
         setCurrentReply(response.reply);
-        addChatMessage({
-          role: "assistant",
-          content: response.reply.line,
-          timestamp: Date.now()
-        });
       } catch (error) {
         console.error("Chat failed", error);
         const fallbackReply: LlmResponse = {
@@ -255,16 +382,11 @@ export function TokkiCharacter(): JSX.Element {
           intent: "none"
         };
         setCurrentReply(fallbackReply);
-        addChatMessage({
-          role: "assistant",
-          content: fallbackReply.line,
-          timestamp: Date.now()
-        });
       } finally {
         setIsTyping(false);
       }
     },
-    [addChatMessage, applyTick, setCurrentReply, setIsTyping]
+    [applyTick, setCurrentReply, setIsTyping]
   );
 
   const actionView = useMemo(
@@ -274,12 +396,11 @@ export function TokkiCharacter(): JSX.Element {
 
   return (
     <section
-      className={`tokki-card ${chatOpen ? "tokki-card--chat-open" : ""}`}
+      ref={cardRef}
+      className={`tokki-card ${chatLayoutOpen ? "tokki-card--chat-open" : ""}`}
       aria-label="Tokki"
       data-tauri-drag-region
     >
-      <ChatBubble reply={currentReply} isTyping={isTyping} />
-
       <div className="tokki-stage" data-tauri-drag-region>
         {showHoverSparkles && <HoverSparkles />}
         <button
@@ -298,19 +419,21 @@ export function TokkiCharacter(): JSX.Element {
         >
           <TokkiAvatarAsset assetId={actionView.assetId} />
         </button>
+        <FXLayer />
       </div>
 
       {chatPanelVisible && (
         <div
           className={`tokki-chat-panel ${chatPanelClosing ? "tokki-chat-panel--closing" : "tokki-chat-panel--open"}`}
         >
-          <AvatarPicker />
+          <ChatBubble reply={currentReply} isTyping={isTyping} />
           <ChatInput
             onSend={(msg) => {
               void onSendMessage(msg);
             }}
             disabled={isTyping}
           />
+          <AvatarPicker />
         </div>
       )}
 

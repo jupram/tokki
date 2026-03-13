@@ -45,6 +45,7 @@ body {
 }
 
 .tokki-stage {
+  position: relative;
   display: grid;
   place-items: center;
   margin: 0;
@@ -785,29 +786,6 @@ body {
   animation: cat-tail-sway 3.2s var(--ease-standard) infinite;
 }
 
-/* Fox avatar overrides */
-
-.tokki-asset--fox .tokki-ear-shell,
-.tokki-asset--fox .tokki-head {
-  fill: var(--tokki-shell);
-  stroke: rgba(58, 30, 18, 0.22);
-  stroke-width: 2;
-}
-
-.tokki-asset--fox .tokki-face-mask {
-  transition: opacity var(--motion-base) var(--ease-standard);
-}
-
-.tokki-asset--fox .tokki-tail {
-  transform-origin: 108px 112px;
-  will-change: transform;
-  animation: fox-tail-wag 2.6s var(--ease-standard) infinite;
-}
-
-.tokki-asset--fox .tokki-tail-tip {
-  animation: tail-tip-glow 2.6s var(--ease-standard) infinite;
-}
-
 @keyframes cat-tail-sway {
   0% {
     transform: rotate(0deg);
@@ -820,39 +798,6 @@ body {
   }
   100% {
     transform: rotate(0deg);
-  }
-}
-
-@keyframes fox-tail-wag {
-  0% {
-    transform: rotate(0deg);
-  }
-  20% {
-    transform: rotate(11deg);
-  }
-  48% {
-    transform: rotate(-3deg);
-  }
-  72% {
-    transform: rotate(-9deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes tail-tip-glow {
-  0% {
-    opacity: 0.84;
-    filter: brightness(1);
-  }
-  50% {
-    opacity: 1;
-    filter: brightness(1.1);
-  }
-  100% {
-    opacity: 0.84;
-    filter: brightness(1);
   }
 }
 
@@ -869,16 +814,25 @@ body {
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
+.tokki-card:not(.tokki-card--chat-open) .tokki-stage {
+  transform: translateY(6px);
+}
+
 .tokki-card--chat-open .tokki-stage {
-  transform: translateY(-1px);
+  transform: translateY(12px);
+}
+
+.tokki-card--chat-open .tokki-hover-decor--stars {
+  top: -8px;
 }
 
 .chat-bubble {
   position: relative;
-  max-width: 260px;
+  width: 100%;
+  max-width: 100%;
   min-height: 32px;
   padding: 10px 14px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   background: rgba(255, 252, 245, 0.92);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -891,6 +845,7 @@ body {
   transform: translateY(6px) scale(0.965);
   will-change: transform, opacity;
   animation: none;
+  pointer-events: auto;
 }
 
 .chat-bubble--enter {
@@ -898,7 +853,7 @@ body {
 }
 
 .chat-bubble--exit {
-  animation: bubble-exit 280ms var(--ease-out) forwards;
+  animation: bubble-exit 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .chat-bubble__tail {
@@ -973,9 +928,13 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+  55% {
+    opacity: 0.52;
+    transform: translateY(-0.5px) scale(0.996);
+  }
   100% {
     opacity: 0;
-    transform: translateY(-4px) scale(0.975);
+    transform: translateY(-1px) scale(0.992);
   }
 }
 
@@ -997,11 +956,11 @@ body {
 .tokki-chat-panel {
   width: 100%;
   max-width: 280px;
-  margin-top: 6px;
+  margin-top: 12px;
   transform-origin: center top;
   will-change: transform, opacity;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .tokki-chat-panel--open {
@@ -1013,15 +972,22 @@ body {
   animation: panel-slide-out 220ms var(--ease-out) forwards;
 }
 
+.avatar-picker-wrap {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin-bottom: 6px;
+}
+
 .avatar-picker {
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .avatar-picker__btn {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1.5px solid rgba(180, 150, 120, 0.2);
   background: rgba(255, 252, 245, 0.85);
@@ -1054,7 +1020,7 @@ body {
 }
 
 .avatar-picker__emoji {
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1;
 }
 
@@ -1208,11 +1174,9 @@ body {
 
 @media (max-width: 220px), (max-height: 230px) {
   .tokki-card--chat-open .chat-bubble {
-    position: relative;
     width: max-content;
     max-width: 156px;
     min-height: 18px;
-    margin: 0 0 3px;
     padding: 4px 6px;
   }
 
@@ -1246,16 +1210,16 @@ body {
   }
 
   .tokki-card--chat-open .avatar-picker {
-    gap: 3px;
+    gap: 5px;
   }
 
   .tokki-card--chat-open .avatar-picker__btn {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 
   .tokki-card--chat-open .avatar-picker__emoji {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .tokki-card--chat-open .chat-input {
@@ -1274,3 +1238,142 @@ body {
   }
 }
 
+/* ── Particle FX keyframes ──────────────────────── */
+
+.fx-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.fx-ember {
+  animation: ember-rise 2s ease-out infinite both;
+}
+
+.fx-petal {
+  animation: petal-drift 3s ease-in-out infinite both;
+}
+
+.fx-snow {
+  animation: snow-fall 3s linear infinite both;
+}
+
+.fx-wisp {
+  animation: wisp-orbit 2.5s ease-in-out infinite both;
+}
+
+.fx-star {
+  animation: star-twinkle 1.8s ease-in-out infinite both;
+}
+
+.fx-ink {
+  animation: ink-dissolve 2s ease-out infinite both;
+}
+
+@keyframes ember-rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-18px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-35px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes petal-drift {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0.8;
+  }
+  33% {
+    transform: translate(8px, 12px) rotate(60deg);
+    opacity: 0.7;
+  }
+  66% {
+    transform: translate(-4px, 25px) rotate(150deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(6px, 40px) rotate(240deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.75;
+  }
+  25% {
+    transform: translateY(10px) translateX(3px);
+  }
+  50% {
+    transform: translateY(20px) translateX(-2px);
+    opacity: 0.6;
+  }
+  75% {
+    transform: translateY(30px) translateX(4px);
+  }
+  100% {
+    transform: translateY(40px) translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes wisp-orbit {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translate(6px, -8px) scale(1.2);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(0, -12px) scale(1);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-6px, -6px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+}
+
+@keyframes star-twinkle {
+  0%, 100% {
+    transform: scale(0.5);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+}
+
+@keyframes ink-dissolve {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
