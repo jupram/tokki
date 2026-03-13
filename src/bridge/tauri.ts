@@ -2,23 +2,27 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import {
+  createDefaultTokkiSettings,
   createInitialTokkiState,
   type AvatarId,
   type BehaviorAction,
   type BehaviorTickPayload,
   type ChatResponse,
   type LlmResponse,
+  type TokkiSettings,
   type TokkiState,
   type TransitionReason,
   type UserEvent
 } from "../types/tokki";
 
 const BEHAVIOR_TICK_EVENT = "tokki://behavior_tick";
+const SETTINGS_UPDATED_EVENT = "tokki://settings_updated";
 const LLM_NOT_CONFIGURED = "llm not configured";
 const INVALID_LLM_ENDPOINT =
   "invalid llm endpoint: use /v1/responses or /v1/chat/completions (OpenAI-compatible)";
 
 type TickHandler = (payload: BehaviorTickPayload) => void;
+type SettingsHandler = (settings: TokkiSettings) => void;
 
 export interface LlmRequestOptions {
   endpoint?: string;
@@ -64,6 +68,31 @@ function resolveLlmEndpoint(overrideEndpoint?: string): string | null {
   }
 
   return sanitizeValue(import.meta.env.VITE_LLM_ENDPOINT as string | undefined);
+}
+
+function normalizeSettings(value: unknown): TokkiSettings {
+  const defaults = createDefaultTokkiSettings();
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+
+  const candidate = value as Partial<TokkiSettings>;
+  const llm = candidate.llm && typeof candidate.llm === "object" ? candidate.llm : defaults.llm;
+  const preferences =
+    candidate.preferences && typeof candidate.preferences === "object"
+      ? candidate.preferences
+      : defaults.preferences;
+
+  return {
+    llm: {
+      endpoint: sanitizeValue(llm.endpoint ?? undefined),
+      model: sanitizeValue(llm.model ?? undefined),
+      apiKey: sanitizeValue(llm.apiKey ?? undefined)
+    },
+    preferences: {
+      avatarId: (preferences.avatarId ?? null) as AvatarId | null
+    }
+  };
 }
 
 function isStandardLlmEndpoint(endpoint: string): boolean {
@@ -408,7 +437,9 @@ export async function sendChatMessage(message: string): Promise<ChatResponse> {
 }
 
 export async function setAvatar(avatarId: AvatarId): Promise<void> {
-  void avatarId;
+  if (isTauriRuntime()) {
+    await invoke<TokkiSettings>("set_avatar_preference", { avatarId });
+  }
 }
 
 export async function requestLlmReply(
@@ -431,4 +462,47 @@ export async function requestLlmReply(
   }
 
   return LLM_NOT_CONFIGURED;
+}
+
+export async function getSettings(): Promise<TokkiSettings> {
+  if (!isTauriRuntime()) {
+    return createDefaultTokkiSettings();
+  }
+
+  const settings = await invoke<TokkiSettings>("get_settings");
+  return normalizeSettings(settings);
+}
+
+export async function saveSettings(settings: TokkiSettings): Promise<TokkiSettings> {
+  const normalized = normalizeSettings(settings);
+  if (!isTauriRuntime()) {
+    return normalized;
+  }
+
+  const saved = await invoke<TokkiSettings>("save_settings", { settings: normalized });
+  return normalizeSettings(saved);
+}
+
+export async function resetSettings(): Promise<TokkiSettings> {
+  if (!isTauriRuntime()) {
+    return createDefaultTokkiSettings();
+  }
+
+  const reset = await invoke<TokkiSettings>("reset_settings");
+  return normalizeSettings(reset);
+}
+
+export async function subscribeSettingsChanged(handler: SettingsHandler): Promise<() => void> {
+  if (!isTauriRuntime()) {
+    handler(createDefaultTokkiSettings());
+    return () => {};
+  }
+
+  const unlisten = await listen<TokkiSettings>(SETTINGS_UPDATED_EVENT, (event) => {
+    handler(normalizeSettings(event.payload));
+  });
+
+  return () => {
+    void unlisten();
+  };
 }

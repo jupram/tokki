@@ -9,7 +9,9 @@ export function AvatarPicker(): JSX.Element {
 
   const pick = (id: AvatarId): void => {
     setAvatarId(id);
-    void setAvatar(id);
+    void setAvatar(id).catch((error) => {
+      console.error("Failed to persist avatar preference", error);
+    });
   };
 
   const avatars = getAllAvatars();

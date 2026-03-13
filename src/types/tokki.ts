@@ -56,6 +56,30 @@ export type AvatarId =
   | "penguin_v1"
   | "owl_v1";
 
+export interface TokkiSettings {
+  llm: {
+    endpoint: string | null;
+    model: string | null;
+    apiKey: string | null;
+  };
+  preferences: {
+    avatarId: AvatarId | null;
+  };
+}
+
+export function createDefaultTokkiSettings(): TokkiSettings {
+  return {
+    llm: {
+      endpoint: null,
+      model: null,
+      apiKey: null
+    },
+    preferences: {
+      avatarId: null
+    }
+  };
+}
+
 export function createInitialTokkiState(): TokkiState {
   return {
     current_action: {
